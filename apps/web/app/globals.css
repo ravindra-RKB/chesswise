@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  .dark {
+    /* Chesswise brand tokens (HSL values without hsl() wrapper for Tailwind) */
+    --bg-ink: 218 17% 9%;
+    --bg-panel: 215 17% 14%;
+    --ivory: 42 39% 88%;
+    --accent-gold: 41 54% 54%;
+    --blunder-red: 0 45% 42%;
+    --good-green: 136 20% 46%;
+
+    /* shadcn/ui semantic token mappings */
+    --background: var(--bg-ink);
+    --foreground: var(--ivory);
+
+    --card: var(--bg-panel);
+    --card-foreground: var(--ivory);
+
+    --popover: var(--bg-panel);
+    --popover-foreground: var(--ivory);
+
+    --primary: var(--accent-gold);
+    --primary-foreground: 218 17% 9%;
+
+    --secondary: 215 18% 19%;
+    --secondary-foreground: var(--ivory);
+
+    --muted: 218 17% 16%;
+    --muted-foreground: 40 9% 58%;
+
+    --accent: 215 18% 22%;
+    --accent-foreground: var(--ivory);
+
+    --destructive: var(--blunder-red);
+    --destructive-foreground: var(--ivory);
+
+    --success: var(--good-green);
+    --success-foreground: var(--ivory);
+
+    --border: 217 18% 22%;
+    --input: 217 18% 22%;
+    --ring: var(--accent-gold);
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}
+
+/* Chess notation — always mono + tabular-nums */
+.notation {
+  @apply font-mono tabular-nums;
+}
