@@ -1,14 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Square } from '@chesswise/chess-core';
-import { fenToPieceMap, getLegalMovesForSquare, PIECE_UNICODE } from '@chesswise/chess-core';
-import { Chess } from '@chesswise/chess-core';
+import { useState, useCallback, useMemo } from 'react';
+import { Chessboard } from 'react-chessboard';
+import { Square, Chess, fenToPieceMap, getLegalMovesForSquare } from '@chesswise/chess-core';
 import { cn } from '@/lib/utils';
 import PromotionModal from './promotion-modal';
-
-const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-const RANKS = [8, 7, 6, 5, 4, 3, 2, 1];
 
 interface ChessBoardProps {
   fen: string;
@@ -37,58 +33,74 @@ export default function ChessBoard({
     to: Square;
   } | null>(null);
 
-  const pieceMap = fenToPieceMap(fen);
-  const game = new Chess(fen);
-
-  const displayFiles = orientation === 'white' ? FILES : [...FILES].reverse();
-  const displayRanks = orientation === 'white' ? RANKS : [...RANKS].reverse();
+  const game = useMemo(() => new Chess(fen), [fen]);
+  const pieceMap = useMemo(() => fenToPieceMap(fen), [fen]);
 
   const handleSquareClick = useCallback(
-    (square: Square) => {
+    ({ square }: { square: string }) => {
       if (!interactive) return;
 
-      const piece = pieceMap[square];
+      const sq = square as Square;
+      const pieceStr = pieceMap[sq]; // our internal state
 
-      // If clicking a legal target — make the move
-      if (selected && legalTargets.includes(square)) {
-        // Check for pawn promotion
+      if (selected && legalTargets.includes(sq)) {
         const movingPiece = pieceMap[selected];
         const isPromotion =
-          movingPiece &&
-          movingPiece.toUpperCase() === 'P' &&
-          (square[1] === '8' || square[1] === '1');
+          movingPiece && movingPiece.toUpperCase() === 'P' && (sq[1] === '8' || sq[1] === '1');
 
         if (isPromotion) {
-          setPromotionPending({ from: selected, to: square });
+          setPromotionPending({ from: selected, to: sq });
           setSelected(null);
           setLegalTargets([]);
           return;
         }
 
-        onMove?.(selected, square);
+        onMove?.(selected, sq);
         setSelected(null);
         setLegalTargets([]);
         return;
       }
 
-      // If clicking own piece — select it
       const currentTurn = game.turn();
       const isOwnPiece =
-        piece &&
-        (currentTurn === 'w' ? piece === piece.toUpperCase() : piece === piece.toLowerCase());
+        pieceStr &&
+        (currentTurn === 'w'
+          ? pieceStr === pieceStr.toUpperCase()
+          : pieceStr === pieceStr.toLowerCase());
 
-      if (piece && isOwnPiece) {
-        setSelected(square);
-        setLegalTargets(getLegalMovesForSquare(game, square));
+      if (pieceStr && isOwnPiece) {
+        setSelected(sq);
+        setLegalTargets(getLegalMovesForSquare(game, sq));
         return;
       }
 
-      // Clicked empty square or enemy piece without selection — deselect
       setSelected(null);
       setLegalTargets([]);
     },
     [selected, legalTargets, pieceMap, game, interactive, onMove],
   );
+
+  const handlePieceDrop = ({ sourceSquare, targetSquare, piece }: any) => {
+    if (!interactive) return false;
+    if (!targetSquare) return false;
+
+    const moves = getLegalMovesForSquare(game, sourceSquare as Square);
+    if (!moves.includes(targetSquare as Square)) return false;
+
+    const pieceStr = piece.pieceType || '';
+    const isPromotion =
+      pieceStr.toUpperCase().includes('P') && (targetSquare[1] === '8' || targetSquare[1] === '1');
+
+    if (isPromotion) {
+      setPromotionPending({ from: sourceSquare as Square, to: targetSquare as Square });
+      return false;
+    }
+
+    onMove?.(sourceSquare as Square, targetSquare as Square);
+    setSelected(null);
+    setLegalTargets([]);
+    return true;
+  };
 
   const handlePromotion = useCallback(
     (piece: string) => {
@@ -100,104 +112,92 @@ export default function ChessBoard({
     [promotionPending, onMove],
   );
 
-  const getPieceFileName = (p: string) => {
-    const color = p === p.toUpperCase() ? 'w' : 'b';
-    return `${color}${p.toUpperCase()}`;
-  };
+  const customPieces = useMemo(() => {
+    const piecesList = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
+    const comps: any = {};
+    piecesList.forEach((p) => {
+      comps[p] = ({ squareWidth }: any) => (
+        <img
+          src={`/pieces/${p}.svg`}
+          alt={p}
+          style={{ width: squareWidth, height: squareWidth }}
+          className="pointer-events-none select-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
+          draggable={false}
+        />
+      );
+    });
+    return comps;
+  }, []);
+
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {};
+
+    if (lastMove) {
+      styles[lastMove.from] = { backgroundColor: 'rgba(245, 246, 130, 0.6)' };
+      styles[lastMove.to] = { backgroundColor: 'rgba(245, 246, 130, 0.6)' };
+    }
+
+    if (selected) {
+      styles[selected] = { ...styles[selected], backgroundColor: 'rgba(245, 246, 130, 0.6)' };
+    }
+
+    if (checkedKingSquare) {
+      styles[checkedKingSquare] = {
+        ...styles[checkedKingSquare],
+        backgroundColor: 'rgba(220, 38, 38, 0.6)',
+      };
+    }
+
+    legalTargets.forEach((sq) => {
+      const isOccupied = pieceMap[sq];
+      if (isOccupied) {
+        styles[sq] = {
+          ...styles[sq],
+          boxShadow: 'inset 0 0 0 6px rgba(0,0,0,0.15)',
+          borderRadius: '50%',
+        };
+      } else {
+        styles[sq] = {
+          ...styles[sq],
+          background: 'radial-gradient(circle, rgba(0,0,0,0.15) 15%, transparent 16%)',
+        };
+      }
+    });
+
+    return styles;
+  }, [lastMove, selected, checkedKingSquare, legalTargets, pieceMap]);
 
   return (
-    <div className="relative inline-block overflow-hidden rounded-sm ring-4 ring-[#333]">
+    <div className="relative inline-block rounded-sm ring-4 ring-[#333]">
       <div
-        className="grid select-none"
         style={{
-          gridTemplateColumns: `repeat(8, 1fr)`,
-          gridTemplateRows: `repeat(8, 1fr)`,
           width: 'min(90vw, 85vh, 760px)',
           height: 'min(90vw, 85vh, 760px)',
           maxWidth: '760px',
           maxHeight: '760px',
         }}
       >
-        {displayRanks.map((rank, rankIdx) =>
-          displayFiles.map((file, fileIdx) => {
-            const square = `${file}${rank}` as Square;
-            const piece = pieceMap[square];
-            const isLight = (rankIdx + fileIdx) % 2 === 0;
-            const isSelected = selected === square;
-            const isLegalTarget = legalTargets.includes(square);
-            const isLastMove = lastMove && (lastMove.from === square || lastMove.to === square);
-            const isCheckedKing = checkedKingSquare === square;
-
-            return (
-              <div
-                key={square}
-                onClick={() => handleSquareClick(square)}
-                className={cn(
-                  'relative flex cursor-pointer items-center justify-center',
-                  isLight ? 'bg-[#EBECD0]' : 'bg-[#739552]',
-                )}
-                style={{ aspectRatio: '1' }}
-              >
-                {/* Last Move & Selected Highlight */}
-                {(isLastMove || isSelected) && (
-                  <div className="pointer-events-none absolute inset-0 bg-[#F5F682]/60 mix-blend-multiply" />
-                )}
-
-                {/* Check Highlight */}
-                {isCheckedKing && (
-                  <div className="pointer-events-none absolute inset-0 rounded-full bg-red-600/60 mix-blend-multiply blur-[2px]" />
-                )}
-
-                {/* Coordinate labels */}
-                {showCoordinates && fileIdx === 0 && (
-                  <span
-                    className={cn(
-                      'absolute left-1 top-1 select-none text-[11px] font-bold leading-none',
-                      isLight ? 'text-[#739552]' : 'text-[#EBECD0]',
-                    )}
-                  >
-                    {rank}
-                  </span>
-                )}
-                {showCoordinates && rankIdx === 7 && (
-                  <span
-                    className={cn(
-                      'absolute bottom-1 right-1.5 select-none text-[11px] font-bold leading-none',
-                      isLight ? 'text-[#739552]' : 'text-[#EBECD0]',
-                    )}
-                  >
-                    {file}
-                  </span>
-                )}
-
-                {/* Legal move indicator */}
-                {isLegalTarget && !piece && (
-                  <div className="pointer-events-none z-10 h-[32%] w-[32%] rounded-full bg-black/15" />
-                )}
-                {isLegalTarget && piece && (
-                  <div className="pointer-events-none absolute inset-0 z-20 m-auto h-[90%] w-[90%] rounded-full border-[6px] border-black/15" />
-                )}
-
-                {/* Chess piece */}
-                {piece && (
-                  <img
-                    src={`/pieces/${getPieceFileName(piece)}.svg`}
-                    alt={piece}
-                    className={cn(
-                      'pointer-events-none z-10 h-[95%] w-[95%] select-none',
-                      // Add a very subtle drop shadow to give depth to the SVGs
-                      'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]',
-                    )}
-                    draggable={false}
-                  />
-                )}
-              </div>
-            );
-          }),
-        )}
+        <Chessboard
+          options={{
+            position: fen,
+            boardOrientation: orientation,
+            onPieceDrop: handlePieceDrop,
+            onSquareClick: handleSquareClick,
+            darkSquareStyle: { backgroundColor: '#739552' },
+            lightSquareStyle: { backgroundColor: '#EBECD0' },
+            squareStyles: customSquareStyles,
+            pieces: customPieces,
+            showNotation: showCoordinates,
+            animationDurationInMs: 300,
+            canDragPiece: ({ piece }) => {
+              if (!interactive) return false;
+              const turn = game.turn();
+              return piece.pieceType.startsWith(turn);
+            },
+          }}
+        />
       </div>
 
-      {/* Promotion modal */}
       {promotionPending && (
         <PromotionModal
           color={game.turn()}
