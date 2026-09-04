@@ -358,8 +358,21 @@ export default function PlayPage() {
             Flip
           </button>
           <button
-            onClick={chess.undoMove}
-            disabled={chess.history.length < 2}
+            onClick={() => {
+              if (chess.turn === engineColor) {
+                // Engine is thinking, just undo player's last move
+                chess.undoMove();
+                engine.stopAnalysis();
+              } else {
+                // Player's turn, undo engine's last move and player's previous move
+                if (chess.history.length >= 2) {
+                  chess.undoMove();
+                  chess.undoMove();
+                  engine.stopAnalysis();
+                }
+              }
+            }}
+            disabled={chess.history.length === 0}
             className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/40 disabled:opacity-40"
           >
             Undo
