@@ -116,11 +116,11 @@ export default function ChessBoard({
     const piecesList = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
     const comps: any = {};
     piecesList.forEach((p) => {
-      comps[p] = ({ squareWidth }: any) => (
+      comps[p] = () => (
         <img
           src={`/pieces/${p}.svg`}
           alt={p}
-          style={{ width: squareWidth, height: squareWidth }}
+          style={{ width: '100%', height: '100%' }}
           className="pointer-events-none select-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
           draggable={false}
         />
