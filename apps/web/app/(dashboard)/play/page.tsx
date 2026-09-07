@@ -60,6 +60,7 @@ export default function PlayPage() {
   const [hintLevel, setHintLevel] = useState<0 | 1 | 2 | 3>(0);
   const [hintText, setHintText] = useState<string>('');
   const [xp, setXp] = useState<number | null>(null);
+  const [is3DMode, setIs3DMode] = useState(false);
 
   const chess = useChess();
   const engine = useEngine({ skillLevel: difficulty.skillLevel, depth: difficulty.depth });
@@ -231,6 +232,7 @@ export default function PlayPage() {
           onMove={handlePlayerMove}
           interactive={!chess.isGameOver && chess.turn !== engineColor}
           checkedKingSquare={checkedKingSquare}
+          is3D={is3DMode}
         />
       </div>
 
@@ -350,6 +352,12 @@ export default function PlayPage() {
             className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             New Game
+          </button>
+          <button
+            onClick={() => setIs3DMode(!is3DMode)}
+            className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/40"
+          >
+            {is3DMode ? '2D Mode' : '3D Mode'}
           </button>
           <button
             onClick={handleFlipBoard}

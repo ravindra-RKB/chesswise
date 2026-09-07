@@ -15,6 +15,7 @@ interface ChessBoardProps {
   showCoordinates?: boolean;
   inCheck?: boolean;
   checkedKingSquare?: Square | null;
+  is3D?: boolean;
 }
 
 export default function ChessBoard({
@@ -25,6 +26,7 @@ export default function ChessBoard({
   interactive = true,
   showCoordinates = true,
   checkedKingSquare,
+  is3D = false,
 }: ChessBoardProps) {
   const [selected, setSelected] = useState<Square | null>(null);
   const [legalTargets, setLegalTargets] = useState<Square[]>([]);
@@ -117,17 +119,30 @@ export default function ChessBoard({
     const comps: any = {};
     piecesList.forEach((p) => {
       comps[p] = () => (
-        <img
-          src={`/pieces/${p}.svg`}
-          alt={p}
-          style={{ width: '100%', height: '100%' }}
-          className="pointer-events-none select-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
-          draggable={false}
-        />
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            transform: is3D ? 'rotateX(-50deg) translateY(-25%) scale(1.4)' : 'none',
+            transformOrigin: 'bottom center',
+            transition: 'transform 0.5s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <img
+            src={`/pieces/${p}.svg`}
+            alt={p}
+            style={{ width: '100%', height: '100%' }}
+            className="pointer-events-none select-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]"
+            draggable={false}
+          />
+        </div>
       );
     });
     return comps;
-  }, []);
+  }, [is3D]);
 
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
@@ -168,7 +183,16 @@ export default function ChessBoard({
   }, [lastMove, selected, checkedKingSquare, legalTargets, pieceMap]);
 
   return (
-    <div className="relative inline-block rounded-sm ring-4 ring-[#333]">
+    <div
+      className={cn(
+        'relative inline-block rounded-sm transition-transform duration-500',
+        is3D ? 'shadow-[0_20px_0_0_#222] ring-0' : 'ring-4 ring-[#333]',
+      )}
+      style={{
+        transform: is3D ? 'perspective(1200px) rotateX(50deg) translateY(-20px)' : 'none',
+        transformStyle: 'preserve-3d',
+      }}
+    >
       <div
         style={{
           width: 'min(90vw, 85vh, 760px)',
