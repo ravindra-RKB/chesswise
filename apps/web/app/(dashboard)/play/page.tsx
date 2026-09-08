@@ -5,6 +5,7 @@ import { Square } from '@chesswise/chess-core';
 import { useChess } from '@/hooks/use-chess';
 import { useEngine } from '@/hooks/use-engine';
 import ChessBoard from '@/components/chess/chess-board';
+import ChessBoard3D from '@/components/chess/chess-board-3d';
 import MoveList from '@/components/chess/move-list';
 import { cn } from '@/lib/utils';
 import { getMirrorBotConfig, type SkillProfile } from '@/lib/mirror-bot';
@@ -225,15 +226,23 @@ export default function PlayPage() {
     <div className="flex h-full flex-col gap-6 lg:flex-row">
       {/* Board area */}
       <div className="flex flex-1 items-start justify-center pt-2">
-        <ChessBoard
-          fen={chess.fen}
-          orientation={orientation}
-          lastMove={lastMove}
-          onMove={handlePlayerMove}
-          interactive={!chess.isGameOver && chess.turn !== engineColor}
-          checkedKingSquare={checkedKingSquare}
-          is3D={is3DMode}
-        />
+        {is3DMode ? (
+          <ChessBoard3D
+            fen={chess.fen}
+            orientation={orientation}
+            onMove={handlePlayerMove}
+            interactive={!chess.isGameOver && chess.turn !== engineColor}
+          />
+        ) : (
+          <ChessBoard
+            fen={chess.fen}
+            orientation={orientation}
+            lastMove={lastMove}
+            onMove={handlePlayerMove}
+            interactive={!chess.isGameOver && chess.turn !== engineColor}
+            checkedKingSquare={checkedKingSquare}
+          />
+        )}
       </div>
 
       {/* Side panel */}

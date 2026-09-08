@@ -15,8 +15,12 @@
     "@chesswise/shared-types": "workspace:*",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.8.0",
+    "@react-spring/three": "^10.1.2",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.46.0",
+    "@types/three": "^0.186.0",
     "bullmq": "^6.3.6",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
@@ -29,7 +33,8 @@
     "react-dom": "^19.0.0",
     "stockfish": "^18.0.8",
     "tailwind-merge": "^2.5.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "three": "^0.186.0"
   },
   "devDependencies": {
     "@chesswise/eslint-config": "workspace:*",
