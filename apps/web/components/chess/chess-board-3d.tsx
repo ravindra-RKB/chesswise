@@ -1,10 +1,9 @@
 'use client';
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { useSpring, a } from '@react-spring/three';
 import { Square, Chess, fenToPieceMap, getLegalMovesForSquare } from '@chesswise/chess-core';
-import * as THREE from 'three';
 
 const SQUARE_SIZE = 1;
 const BOARD_OFFSET = (8 * SQUARE_SIZE) / 2 - SQUARE_SIZE / 2;
@@ -12,7 +11,7 @@ const BOARD_OFFSET = (8 * SQUARE_SIZE) / 2 - SQUARE_SIZE / 2;
 // Maps 'a1' to 3D coordinates
 function squareToPos(sq: string, orientation: 'white' | 'black') {
   const file = sq.charCodeAt(0) - 97; // 'a' -> 0, 'h' -> 7
-  const rank = parseInt(sq[1]) - 1; // '1' -> 0, '8' -> 7
+  const rank = parseInt(sq.charAt(1)) - 1; // '1' -> 0, '8' -> 7
 
   let x = file * SQUARE_SIZE - BOARD_OFFSET;
   let z = -(rank * SQUARE_SIZE - BOARD_OFFSET); // -z is forward in WebGL
@@ -39,14 +38,15 @@ function Piece({ data, geometries, materials, orientation, onClick }: any) {
     config: { mass: 1, tension: 170, friction: 26 },
   });
 
-  const geomName = {
+  const geomMap = {
     p: 'pawn',
     n: 'knight',
     b: 'bishop',
     r: 'rook',
     q: 'queen',
     k: 'king',
-  }[data.type.toLowerCase()];
+  };
+  const geomName = geomMap[data.type.toLowerCase() as keyof typeof geomMap];
 
   const geometry = geometries[geomName].geometry;
   const material = data.color === 'w' ? materials.white : materials.black;
@@ -81,7 +81,7 @@ function BoardSquares({ orientation, selected, legalTargets, onSquareClick }: an
   for (let rank = 0; rank < 8; rank++) {
     for (let file = 0; file < 8; file++) {
       const sq = (String.fromCharCode(97 + file) + (rank + 1)) as Square;
-      const [x, y, z] = squareToPos(sq, orientation);
+      const [x, _y, z] = squareToPos(sq, orientation);
       const isBlack = (rank + file) % 2 === 0;
 
       const isSelected = selected === sq;
@@ -128,7 +128,6 @@ export default function ChessBoard3D({
   // Sync FEN to pieces with stable IDs for animation
   useEffect(() => {
     const map = fenToPieceMap(fen);
-    const newPieces: PieceData[] = [];
 
     // Very simple diff: just recreate all for now, but to animate properly we need stable IDs.
     // For a real robust diff, we compare old pieces to new map.
