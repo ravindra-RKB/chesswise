@@ -3,6 +3,8 @@
 ### Chesswise — AI Chess Trainer
 
 **Team:** Vishnu M.S. & Ravindra Kumar Bundela · **Mentor:** Subham Das · **Track:** Gen AI
+**Duration:** 14 weeks
+**Time Commitment:** 2 developers @ 20 hours/week each (approx. 560 total hours)
 
 ---
 
@@ -108,7 +110,7 @@ As a player, I want a plain-language explanation of each mistake so that I can l
 **Acceptance Criteria**
 
 - Every mistake card has an AI-generated explanation.
-- The explanation references only facts from the engine's structured analysis — no invented moves or evaluations.
+- The explanation references only facts from the engine's structured analysis — no invented moves or evaluations. Verified via an automated LLM-eval test suite (e.g., DeepEval or LangSmith) that fails if the output contains any chess move (e.g., "Nf3") or evaluation score (e.g., "+1.5") not explicitly present in the source JSON.
 - The specific tactic label is woven into the explanation.
 - A disclaimer indicates the explanation is AI-generated decision support.
 
@@ -147,7 +149,7 @@ As a player, I want to ask the AI questions about my games and get answers groun
 **Acceptance Criteria**
 
 - Every answer cites the specific game(s) and move(s) it references.
-- The model cannot fabricate evaluations or moves not present in stored data.
+- The model cannot fabricate evaluations or moves not present in stored data. Verified via strict structured output schema (Zod) forcing the LLM to provide exact citation IDs for every claim, and a regression suite testing the RAG pipeline against 50 known game states.
 - I can scope a question to a single game or ask across my full history.
 - The model clearly identifies when it has insufficient data to answer.
 
@@ -208,5 +210,5 @@ IMPORTED → QUEUED → PROCESSING → ANALYSIS_COMPLETE → EXPLANATION_READY �
 - **Every AI output is traceable.** Model version, prompt version, engine depth, and evidence references are stored with every explanation permanently.
 - **Human coaching is never replaced.** Live AI hints exist only in explicitly labeled practice surfaces. The platform never intercepts or assists in rated games on any external platform.
 - **Data belongs to the player.** A player's games, mistakes, and skill profile are private by default. No other player's data is surfaced without an explicit consent step.
-- **Compute is bounded.** Every engine or LLM call has a hard budget enforced server-side, tied to the user's plan tier.
+- **Compute is bounded.** Every engine call has a hard budget enforced server-side, tied to the user's plan tier. _Pipeline Scaling & Cost:_ Free tier analysis runs at Depth 16 (~1 second per move, cost ~$0.001 per game on standard VPS resources). Pro runs at Depth 20+. The pipeline scales horizontally via a BullMQ + Redis queue, spawning separate Native Stockfish worker threads based on available vCPUs so web servers are never blocked.
 - **Fail gracefully.** If an LLM explanation is unavailable, the engine analysis report is still shown. Analysis always takes priority over narration.
