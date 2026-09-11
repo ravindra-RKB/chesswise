@@ -14,6 +14,15 @@ Create a personalized AI chess coaching platform that converts a player's game h
 
 ---
 
+## Team Commitment & Responsibility Split
+
+| Developer                  | Core Focus Areas                 | Must-Have Deliverables Owned                                                                                                     | Est. Hours             |
+| -------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **Vishnu M.S.**            | Backend, Engine, Pipeline & Data | Stockfish WASM/Native setup, BullMQ queue, Deterministic tactic tagger, Prisma DB schema, Audit logging                          | 20 hrs/week (~280 hrs) |
+| **Ravindra Kumar Bundela** | Frontend, UX & GenAI Integration | Interactive chessboard UI, Game report screen, LLM explanation prompts & Zod validation, Radar skill profile, Daily puzzle queue | 20 hrs/week (~280 hrs) |
+
+---
+
 ## Feature Priorities
 
 | Feature                                                           | Priority |
