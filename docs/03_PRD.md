@@ -3,8 +3,8 @@
 ### Chesswise — AI Chess Trainer
 
 **Team:** Vishnu M.S. & Ravindra Kumar Bundela · **Mentor:** Subham Das · **Track:** Gen AI
-**Duration:** 14 weeks
-**Time Commitment:** 2 developers @ 20 hours/week each (approx. 560 total hours)
+**Duration:** 12 weeks (3 months)
+**Time Commitment:** 2 developers @ 20 hours/week each (approx. 480 total hours)
 
 ---
 
@@ -18,8 +18,8 @@ Create a personalized AI chess coaching platform that converts a player's game h
 
 | Developer                  | Core Focus Areas                 | Must-Have Deliverables Owned                                                                                                     | Est. Hours             |
 | -------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| **Vishnu M.S.**            | Backend, Engine, Pipeline & Data | Stockfish WASM/Native setup, BullMQ queue, Deterministic tactic tagger, Prisma DB schema, Audit logging                          | 20 hrs/week (~280 hrs) |
-| **Ravindra Kumar Bundela** | Frontend, UX & GenAI Integration | Interactive chessboard UI, Game report screen, LLM explanation prompts & Zod validation, Radar skill profile, Daily puzzle queue | 20 hrs/week (~280 hrs) |
+| **Vishnu M.S.**            | Backend, Engine, Pipeline & Data | Stockfish WASM/Native setup, BullMQ queue, Deterministic tactic tagger, Prisma DB schema, Audit logging                          | 20 hrs/week (~240 hrs) |
+| **Ravindra Kumar Bundela** | Frontend, UX & GenAI Integration | Interactive chessboard UI, Game report screen, LLM explanation prompts & Zod validation, Radar skill profile, Daily puzzle queue | 20 hrs/week (~240 hrs) |
 
 ---
 
