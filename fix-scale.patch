@@ -1,0 +1,24 @@
+--- apps/web/components/chess/chess-board-3d.tsx
++++ apps/web/components/chess/chess-board-3d.tsx
+@@ -47,9 +47,11 @@
+   const geomName = geomMap[data.type.toLowerCase() as keyof typeof geomMap];
+ 
+-  const geometry = geometries[geomName].geometry;
++  const node = geometries[geomName];
++  const geometry = node.geometry;
+   const material = data.color === 'w' ? materials.white : materials.black;
+ 
+   // Knight needs rotation
+   let rotation: [number, number, number] = [0, 0, 0];
++  
+   if (data.type.toLowerCase() === 'n') {
+     rotation = data.color === 'w' ? [0, Math.PI, 0] : [0, 0, 0];
+   }
+@@ -60,6 +62,7 @@
+       rotation={rotation}
+       geometry={geometry}
+       material={material}
++      scale={node.scale || [1, 1, 1]}
+       castShadow
+       receiveShadow
+       onClick={(e) => {

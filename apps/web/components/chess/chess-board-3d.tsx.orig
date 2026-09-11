@@ -5,7 +5,7 @@ import { useGLTF, OrbitControls, Environment, ContactShadows } from '@react-thre
 import { useSpring, a } from '@react-spring/three';
 import { Square, Chess, fenToPieceMap, getLegalMovesForSquare } from '@chesswise/chess-core';
 
-const SQUARE_SIZE = 2;
+const SQUARE_SIZE = 1;
 const BOARD_OFFSET = (8 * SQUARE_SIZE) / 2 - SQUARE_SIZE / 2;
 
 // Maps 'a1' to 3D coordinates
@@ -47,21 +47,20 @@ function Piece({ data, geometries, materials, orientation, onClick }: any) {
     k: 'king',
   };
   const geomName = geomMap[data.type.toLowerCase() as keyof typeof geomMap];
-  const node = geometries[geomName];
-  const geometry = node.geometry;
+
+  const geometry = geometries[geomName].geometry;
   const material = data.color === 'w' ? materials.white : materials.black;
 
   // Knight needs rotation
-  let rotation = node.rotation ? [node.rotation.x, node.rotation.y, node.rotation.z] : [0, 0, 0];
+  let rotation: [number, number, number] = [0, 0, 0];
   if (data.type.toLowerCase() === 'n') {
-    rotation[1] += data.color === 'w' ? Math.PI : 0;
+    rotation = data.color === 'w' ? [0, Math.PI, 0] : [0, 0, 0];
   }
 
   return (
     <a.mesh
       position={position as any}
-      rotation={rotation as any}
-      scale={node.scale || [1, 1, 1]}
+      rotation={rotation}
       geometry={geometry}
       material={material}
       castShadow
@@ -95,7 +94,7 @@ function BoardSquares({ orientation, selected, legalTargets, onSquareClick }: an
       squares.push(
         <mesh
           key={sq}
-          position={[x, 0.01, z]}
+          position={[x, -0.05, z]}
           rotation={[-Math.PI / 2, 0, 0]}
           onClick={(e) => {
             e.stopPropagation();
@@ -195,9 +194,9 @@ export default function ChessBoard3D({
 
   return (
     <div className="h-full min-h-[600px] w-full overflow-hidden rounded-lg bg-[#222] ring-4 ring-[#333]">
-      <Canvas shadows camera={{ position: [0, 12, 16], fov: 50 }}>
+      <Canvas shadows camera={{ position: [0, 5, 7], fov: 45 }}>
         <ambientLight intensity={0.5} />
-        <spotLight position={[10, 20, 10]} angle={0.2} penumbra={1} intensity={1} castShadow />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
         <BoardSquares
@@ -221,18 +220,18 @@ export default function ChessBoard3D({
         </group>
 
         {/* Board Base / Frame */}
-        <mesh position={[0, -0.25, 0]} receiveShadow>
+        <mesh position={[0, -0.3, 0]} receiveShadow>
           <boxGeometry args={[8 * SQUARE_SIZE + 0.5, 0.5, 8 * SQUARE_SIZE + 0.5]} />
           <meshStandardMaterial color="#333" />
         </mesh>
 
-        <ContactShadows position={[0, 0, 0]} opacity={0.4} scale={20} blur={2} far={4} />
+        <ContactShadows position={[0, -0.04, 0]} opacity={0.4} scale={10} blur={2} far={4} />
         <OrbitControls
           enablePan={false}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.5}
-          minDistance={10}
-          maxDistance={30}
+          minDistance={5}
+          maxDistance={15}
         />
         <Environment preset="city" />
       </Canvas>
