@@ -5,7 +5,7 @@ import { useGLTF, OrbitControls, Environment, ContactShadows } from '@react-thre
 import { useSpring, a } from '@react-spring/three';
 import { Square, Chess, fenToPieceMap, getLegalMovesForSquare } from '@chesswise/chess-core';
 
-const SQUARE_SIZE = 2;
+const SQUARE_SIZE = 1;
 const BOARD_OFFSET = (8 * SQUARE_SIZE) / 2 - SQUARE_SIZE / 2;
 
 // Maps 'a1' to 3D coordinates
@@ -30,40 +30,52 @@ interface PieceData {
   square: Square;
 }
 
-function Piece({ data, geometries, materials, orientation, onClick }: any) {
+// Preload individual piece models
+useGLTF.preload('/pawn.gltf');
+useGLTF.preload('/knight.gltf');
+useGLTF.preload('/bishop.gltf');
+useGLTF.preload('/rook.gltf');
+useGLTF.preload('/queen.gltf');
+useGLTF.preload('/king.gltf');
+
+function Piece({ data, orientation, onClick, isSelected }: any) {
   const [x, y, z] = squareToPos(data.square, orientation);
 
+  const pawnGLTF = useGLTF('/pawn.gltf') as any;
+  const knightGLTF = useGLTF('/knight.gltf') as any;
+  const bishopGLTF = useGLTF('/bishop.gltf') as any;
+  const rookGLTF = useGLTF('/rook.gltf') as any;
+  const queenGLTF = useGLTF('/queen.gltf') as any;
+  const kingGLTF = useGLTF('/king.gltf') as any;
+
+  const typeMap = {
+    p: pawnGLTF.nodes.Object001.geometry,
+    n: knightGLTF.nodes.Object001.geometry,
+    b: bishopGLTF.nodes.Object001.geometry,
+    r: rookGLTF.nodes.Object001.geometry,
+    q: queenGLTF.nodes.Object001.geometry,
+    k: kingGLTF.nodes.Object001.geometry,
+  };
+
+  const geometry = typeMap[data.type.toLowerCase() as keyof typeof typeMap];
+
   const { position } = useSpring({
-    position: [x, y, z],
+    position: [x, isSelected ? y + 0.3 : y, z],
     config: { mass: 1, tension: 170, friction: 26 },
   });
 
-  const geomMap = {
-    p: 'pawn',
-    n: 'knight',
-    b: 'bishop',
-    r: 'rook',
-    q: 'queen',
-    k: 'king',
-  };
-  const geomName = geomMap[data.type.toLowerCase() as keyof typeof geomMap];
-  const node = geometries[geomName];
-  const geometry = node.geometry;
-  const material = data.color === 'w' ? materials.white : materials.black;
-
   // Knight needs rotation
-  let rotation = node.rotation ? [node.rotation.x, node.rotation.y, node.rotation.z] : [0, 0, 0];
+  let rotation: [number, number, number] = [0, 0, 0];
   if (data.type.toLowerCase() === 'n') {
-    rotation[1] += data.color === 'w' ? Math.PI : 0;
+    rotation[1] += data.color === 'b' ? Math.PI : 0; // The knight model might face differently
   }
 
   return (
     <a.mesh
       position={position as any}
-      rotation={rotation as any}
-      scale={node.scale || [1, 1, 1]}
+      rotation={rotation}
+      scale={[0.03, 0.03, 0.03]}
       geometry={geometry}
-      material={material}
       castShadow
       receiveShadow
       onClick={(e) => {
@@ -71,8 +83,13 @@ function Piece({ data, geometries, materials, orientation, onClick }: any) {
         onClick(data.square);
       }}
     >
-      {/* make selection area larger */}
-      <meshBasicMaterial visible={false} />
+      <meshPhysicalMaterial
+        color={data.color === 'w' ? '#d9d9d9' : '#4a4a4a'}
+        metalness={0.2}
+        roughness={0.2}
+        clearcoat={0.8}
+        clearcoatRoughness={0.2}
+      />
     </a.mesh>
   );
 }
@@ -118,8 +135,6 @@ export default function ChessBoard3D({
   onMove,
   interactive = true,
 }: any) {
-  const { nodes, materials } = useGLTF('/chess.glb') as any;
-
   const [pieces, setPieces] = useState<PieceData[]>([]);
   const [selected, setSelected] = useState<Square | null>(null);
   const [legalTargets, setLegalTargets] = useState<Square[]>([]);
@@ -195,9 +210,9 @@ export default function ChessBoard3D({
 
   return (
     <div className="h-full min-h-[600px] w-full overflow-hidden rounded-lg bg-[#222] ring-4 ring-[#333]">
-      <Canvas shadows camera={{ position: [0, 12, 16], fov: 50 }}>
+      <Canvas shadows camera={{ position: [0, 5, 7], fov: 45 }}>
         <ambientLight intensity={0.5} />
-        <spotLight position={[10, 20, 10]} angle={0.2} penumbra={1} intensity={1} castShadow />
+        <spotLight position={[10, 10, 10]} angle={0.2} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
         <BoardSquares
@@ -212,32 +227,29 @@ export default function ChessBoard3D({
             <Piece
               key={p.id}
               data={p}
-              geometries={nodes}
-              materials={materials}
               orientation={orientation}
               onClick={handleSquareClick}
+              isSelected={selected === p.square}
             />
           ))}
         </group>
 
         {/* Board Base / Frame */}
-        <mesh position={[0, -0.25, 0]} receiveShadow>
+        <mesh position={[0, -0.3, 0]} receiveShadow>
           <boxGeometry args={[8 * SQUARE_SIZE + 0.5, 0.5, 8 * SQUARE_SIZE + 0.5]} />
           <meshStandardMaterial color="#333" />
         </mesh>
 
-        <ContactShadows position={[0, 0, 0]} opacity={0.4} scale={20} blur={2} far={4} />
+        <ContactShadows position={[0, -0.04, 0]} opacity={0.4} scale={10} blur={2} far={4} />
         <OrbitControls
           enablePan={false}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.5}
-          minDistance={10}
-          maxDistance={30}
+          minDistance={5}
+          maxDistance={15}
         />
         <Environment preset="city" />
       </Canvas>
     </div>
   );
 }
-
-useGLTF.preload('/chess.glb');
