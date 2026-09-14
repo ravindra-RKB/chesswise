@@ -6,6 +6,7 @@ import { Square } from '@chesswise/chess-core';
 import { useChess } from '@/hooks/use-chess';
 import ChessBoard from '@/components/chess/chess-board';
 import { AnnotationGlyph } from '@/components/chess/annotation-glyph';
+import ChatPanel from '@/components/coach/chat-panel';
 import { cn } from '@/lib/utils';
 
 type MoveQuality = 'BRILLIANT' | 'EXCELLENT' | 'GOOD' | 'INACCURACY' | 'MISTAKE' | 'BLUNDER';
@@ -126,7 +127,15 @@ function EvalGraph({
 }
 
 // Mistake Card
-function MistakeCard({ move, onTryIt }: { move: GameMove; onTryIt: (fen: string) => void }) {
+function MistakeCard({
+  move,
+  onTryIt,
+  onAskCoach,
+}: {
+  move: GameMove;
+  onTryIt: (fen: string) => void;
+  onAskCoach?: (san: string, quality: string) => void;
+}) {
   const glyph = move.quality ? QUALITY_GLYPH[move.quality] : null;
   const [overriding, setOverriding] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
@@ -191,6 +200,14 @@ function MistakeCard({ move, onTryIt }: { move: GameMove; onTryIt: (fen: string)
         >
           Try it in Analysis →
         </button>
+        {onAskCoach && move.quality && (
+          <button
+            onClick={() => onAskCoach(move.san, move.quality!)}
+            className="text-xs text-blue-400 hover:underline"
+          >
+            💬 Ask Coach
+          </button>
+        )}
         {!overridden && !overriding && (
           <button
             onClick={() => setOverriding(true)}
@@ -242,6 +259,8 @@ export default function ReportPage() {
   const [game, setGame] = useState<Game | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachMessage, setCoachMessage] = useState('');
 
   const chess = useChess();
 
@@ -270,6 +289,13 @@ export default function ReportPage() {
 
   const handleTryIt = (fen: string) => {
     router.push(`/analyze?fen=${encodeURIComponent(fen)}`);
+  };
+
+  const handleAskCoach = (san: string, quality: string) => {
+    setCoachMessage(
+      `In this game, I played ${san} which was a ${quality.toLowerCase()}. Why was this a mistake and what should I have played instead?`,
+    );
+    setCoachOpen(true);
   };
 
   if (loading) {
@@ -430,11 +456,16 @@ export default function ReportPage() {
           {mistakes.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Mistakes & Blunders ({mistakes.length})
+                Mistakes &amp; Blunders ({mistakes.length})
               </p>
               <div className="max-h-96 space-y-2 overflow-y-auto">
                 {mistakes.map((m) => (
-                  <MistakeCard key={m.id} move={m} onTryIt={handleTryIt} />
+                  <MistakeCard
+                    key={m.id}
+                    move={m}
+                    onTryIt={handleTryIt}
+                    onAskCoach={handleAskCoach}
+                  />
                 ))}
               </div>
             </div>
@@ -447,6 +478,29 @@ export default function ReportPage() {
           )}
         </div>
       </div>
+
+      {/* Floating Coach FAB */}
+      <button
+        onClick={() => {
+          setCoachMessage('');
+          setCoachOpen((o) => !o);
+        }}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90"
+      >
+        💬 {coachOpen ? 'Close Coach' : 'Ask Coach'}
+      </button>
+
+      {/* Floating coach panel */}
+      {coachOpen && (
+        <div className="fixed bottom-20 right-6 z-50 shadow-2xl">
+          <ChatPanel
+            gameId={gameId}
+            fen={chess.fen}
+            initialMessage={coachMessage}
+            onClose={() => setCoachOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

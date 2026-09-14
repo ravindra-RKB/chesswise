@@ -12,6 +12,7 @@
   "dependencies": {
     "@chesswise/database": "workspace:*",
     "@chesswise/shared-types": "workspace:*",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.8.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.46.0",

@@ -10,6 +10,7 @@ const navItems = [
   { href: '/import', label: 'Import', icon: '📥', disabled: false },
   { href: '/profile', label: 'Profile', icon: '📈', disabled: false },
   { href: '/train', label: 'Train', icon: '🎯', disabled: false },
+  { href: '/coach', label: 'Coach', icon: '💬', disabled: false },
   { href: '/settings', label: 'Settings', icon: '⚙️', disabled: true },
 ];
 

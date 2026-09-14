@@ -46,6 +46,7 @@ model User {
   games        Game[]
   skillProfile SkillProfile?
   puzzleCards  PuzzleCard[]
+  chatSessions ChatSession[]
 
   @@map("users")
 }
@@ -62,8 +63,9 @@ model Game {
   importedAt DateTime   @default(now()) @map("imported_at")
   analyzedAt DateTime?  @map("analyzed_at")
 
-  moves       GameMove[]
-  puzzleCards PuzzleCard[]
+  moves        GameMove[]
+  puzzleCards  PuzzleCard[]
+  chatSessions ChatSession[]
 
   @@index([userId])
   @@map("games")
@@ -143,4 +145,36 @@ model AuditLog {
   @@index([entityId])
   @@index([userId])
   @@map("audit_logs")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model ChatSession {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    String?       @map("game_id") @db.Uuid
+  game      Game?         @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  title     String        @default("New conversation")
+  messages  ChatMessage[]
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  sessionId String      @map("session_id") @db.Uuid
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@map("chat_messages")
 }
