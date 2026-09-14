@@ -14,6 +14,25 @@ enum UserRole {
   ADMIN
 }
 
+enum GameStatus {
+  IMPORTED
+  QUEUED
+  PROCESSING
+  ANALYSIS_COMPLETE
+  EXPLANATION_READY
+  PROFILE_UPDATED
+  PROCESSING_FAILED
+}
+
+enum MoveQuality {
+  BRILLIANT
+  EXCELLENT
+  GOOD
+  INACCURACY
+  MISTAKE
+  BLUNDER
+}
+
 model User {
   id          String   @id @default(uuid()) @db.Uuid
   supabaseId  String   @unique @map("supabase_id")
@@ -24,5 +43,89 @@ model User {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  games        Game[]
+  skillProfile SkillProfile?
+  puzzleCards  PuzzleCard[]
+
   @@map("users")
+}
+
+model Game {
+  id         String     @id @default(uuid()) @db.Uuid
+  userId     String     @map("user_id") @db.Uuid
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pgn        String
+  headers    Json       @default("{}")
+  status     GameStatus @default(IMPORTED)
+  accuracy   Float?
+  errorMsg   String?    @map("error_msg")
+  importedAt DateTime   @default(now()) @map("imported_at")
+  analyzedAt DateTime?  @map("analyzed_at")
+
+  moves       GameMove[]
+  puzzleCards PuzzleCard[]
+
+  @@index([userId])
+  @@map("games")
+}
+
+model GameMove {
+  id          String      @id @default(uuid()) @db.Uuid
+  gameId      String      @map("game_id") @db.Uuid
+  game        Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  moveNumber  Int         @map("move_number")
+  color       String      // "w" or "b"
+  san         String      // standard algebraic notation
+  uci         String      // UCI format (e.g. "e2e4")
+  fenBefore   String      @map("fen_before")
+  evalBefore  Float?      @map("eval_before")  // centipawns (positive = white advantage)
+  evalAfter   Float?      @map("eval_after")
+  evalDelta   Float?      @map("eval_delta")   // evalAfter - evalBefore (negative = bad move)
+  quality     MoveQuality?
+  tacticTag   String?     @map("tactic_tag")   // fork | pin | skewer | discovered_attack | back_rank | null
+  bestMoveSan String?     @map("best_move_san")
+  bestMoveUci String?     @map("best_move_uci")
+  explanation String?     // LLM-generated coaching note
+  explModel   String?     @map("expl_model")   // model version used for explanation
+
+  puzzleCards PuzzleCard[]
+
+  @@index([gameId])
+  @@map("game_moves")
+}
+
+model SkillProfile {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @unique @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tactics    Float    @default(50)    // 0–100 score
+  strategy   Float    @default(50)
+  endgame    Float    @default(50)
+  opening    Float    @default(50)
+  calculation Float   @default(50)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("skill_profiles")
+}
+
+model PuzzleCard {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId      String    @map("game_id") @db.Uuid
+  game        Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameMoveId  String    @map("game_move_id") @db.Uuid
+  gameMove    GameMove  @relation(fields: [gameMoveId], references: [id], onDelete: Cascade)
+  fen         String    // starting position for the puzzle
+  solution    String    // correct UCI move
+  quality     MoveQuality
+  // SM-2 spaced repetition fields
+  nextReviewAt DateTime @default(now()) @map("next_review_at")
+  interval    Int       @default(1)     // days until next review
+  easeFactor  Float     @default(2.5)   @map("ease_factor")
+  solvedCount Int       @default(0)     @map("solved_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, nextReviewAt])
+  @@map("puzzle_cards")
 }

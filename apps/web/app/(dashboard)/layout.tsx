@@ -7,8 +7,9 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠', disabled: false },
   { href: '/play', label: 'Play', icon: '♟', disabled: false },
   { href: '/analyze', label: 'Analyze', icon: '📊', disabled: false },
+  { href: '/import', label: 'Import', icon: '📥', disabled: false },
+  { href: '/profile', label: 'Profile', icon: '📈', disabled: false },
   { href: '/train', label: 'Train', icon: '🎯', disabled: true },
-  { href: '/profile', label: 'Profile', icon: '📈', disabled: true },
   { href: '/settings', label: 'Settings', icon: '⚙️', disabled: true },
 ];
 
