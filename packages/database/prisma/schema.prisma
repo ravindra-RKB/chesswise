@@ -47,6 +47,7 @@ model User {
   skillProfile SkillProfile?
   puzzleCards  PuzzleCard[]
   chatSessions ChatSession[]
+  openingLines OpeningLine[]
 
   @@map("users")
 }
@@ -177,4 +178,22 @@ model ChatMessage {
 
   @@index([sessionId])
   @@map("chat_messages")
+}
+
+model OpeningLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eco          String   @default("???")
+  name         String   @default("Unknown Opening")
+  moves        String   // SAN format e.g. "e4 e5 Nf3"
+  count        Int      @default(0)
+  wins         Int      @default(0)
+  draws        Int      @default(0)
+  losses       Int      @default(0)
+  lastPlayedAt DateTime @default(now()) @map("last_played_at")
+
+  @@unique([userId, moves])
+  @@index([userId])
+  @@map("opening_lines")
 }

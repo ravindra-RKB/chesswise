@@ -207,6 +207,9 @@ async function processGame(gameId: string): Promise<void> {
   // Extract puzzle cards from blunders and mistakes
   await extractPuzzleCards(game.userId, gameId);
 
+  // Extract opening stats
+  await extractOpeningStats(game.userId, gameId);
+
   // Update skill profile
   await updateSkillProfile(game.userId, gameId);
 
@@ -254,6 +257,68 @@ async function extractPuzzleCards(userId: string, gameId: string): Promise<void>
     await prisma.puzzleCard.createMany({ data: puzzles });
     console.log(`[worker] Created ${puzzles.length} puzzle cards`);
   }
+}
+
+async function extractOpeningStats(userId: string, gameId: string): Promise<void> {
+  const game = await prisma.game.findUnique({
+    where: { id: gameId },
+    select: { headers: true, moves: { orderBy: { moveNumber: 'asc' }, take: 10 } },
+  });
+  if (!game) return;
+
+  const h = game.headers as Record<string, string>;
+  const result = h['Result'];
+
+  // Is player white or black?
+  // We assume user imports their own games, but we need to know their color to score win/loss.
+  // Actually, we can just record the result from White's perspective for now and the UI can handle it,
+  // or we can deduce the user's color if we have their username in headers (often 'White' or 'Black').
+  // For simplicity, let's track absolute wins/losses based on standard Result string.
+
+  // Actually, if we just want to track win% for this line, we need to know if the user won.
+  // We don't strictly know which side the user played from just the PGN in Phase 2, but we can assume they
+  // play the moves they imported.
+  // If result is 1-0, white won. If 0-1, black won.
+  let isWin = false;
+  let isLoss = false;
+  let isDraw = result === '1/2-1/2';
+
+  // Since we don't definitively know the user's color here without extra metadata,
+  // we will just store raw result counts and let the UI interpret if needed.
+  // But wait! If we store wins/losses, we need a perspective.
+  // Let's assume for Opening Repertoire, we care about the position reached.
+  // We'll just track total games that reached this position and what the final result was.
+
+  const eco = h['ECO'] ?? '???';
+  const name = h['Opening'] ?? 'Unknown Opening';
+
+  if (game.moves.length === 0) return;
+
+  // Build SAN string of first N moves
+  const movesStr = game.moves.map((m) => m.san).join(' ');
+
+  await prisma.openingLine.upsert({
+    where: { userId_moves: { userId, moves: movesStr } },
+    update: {
+      count: { increment: 1 },
+      wins: result === '1-0' ? { increment: 1 } : undefined, // white win
+      losses: result === '0-1' ? { increment: 1 } : undefined, // black win
+      draws: isDraw ? { increment: 1 } : undefined,
+      lastPlayedAt: new Date(),
+    },
+    create: {
+      userId,
+      eco,
+      name,
+      moves: movesStr,
+      count: 1,
+      wins: result === '1-0' ? 1 : 0,
+      losses: result === '0-1' ? 1 : 0,
+      draws: isDraw ? 1 : 0,
+    },
+  });
+
+  console.log(`[worker] Extracted opening: ${eco} - ${name}`);
 }
 
 async function updateSkillProfile(userId: string, gameId: string): Promise<void> {
