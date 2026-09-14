@@ -12,13 +12,15 @@
   "devDependencies": {
     "@chesswise/eslint-config": "workspace:*",
     "@chesswise/typescript-config": "workspace:*",
+    "@types/node": "^22.0.0",
     "eslint": "^9.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@chesswise/database": "workspace:*",
     "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^6.8.0",
     "bullmq": "^6.3.6",
     "chess.js": "^1.4.0",
     "ioredis": "^6.0.0",
