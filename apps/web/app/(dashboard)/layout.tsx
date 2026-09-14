@@ -12,7 +12,7 @@ const navItems = [
   { href: '/train', label: 'Train', icon: '🎯', disabled: false },
   { href: '/openings', label: 'Openings', icon: '📖', disabled: false },
   { href: '/coach', label: 'Coach', icon: '💬', disabled: false },
-  { href: '/settings', label: 'Settings', icon: '⚙️', disabled: true },
+  { href: '/settings', label: 'Settings', icon: '⚙️', disabled: false },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

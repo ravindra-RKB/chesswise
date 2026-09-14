@@ -129,6 +129,7 @@ export default function ProfilePage() {
     totalSolved: number;
     accuracy7d: number | null;
   } | null>(null);
+  const [userXp, setUserXp] = useState<{ xp: number; level: number } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -141,11 +142,17 @@ export default function ProfilePage() {
       fetch('/api/puzzles/stats')
         .then((r) => r.json())
         .catch(() => null),
+      fetch('/api/settings')
+        .then((r) => r.json())
+        .catch(() => null),
     ])
-      .then(([profileData, gamesData, statsData]) => {
+      .then(([profileData, gamesData, statsData, settingsData]) => {
         setProfile(profileData?.profile ?? null);
         setGameCount(gamesData?.games?.length ?? 0);
         setPuzzleStats(statsData ?? null);
+        if (settingsData?.settings) {
+          setUserXp({ xp: settingsData.settings.xp, level: settingsData.settings.level });
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -160,11 +167,34 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <div>
-        <h1 className="font-serif text-2xl font-bold text-foreground">Skill Profile</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Computed from {gameCount} analyzed game{gameCount !== 1 ? 's' : ''}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-2xl font-bold text-foreground">Skill Profile</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Computed from {gameCount} analyzed game{gameCount !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {userXp && (
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                {userXp.level}
+              </div>
+              <span className="text-sm font-semibold text-foreground">Level {userXp.level}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-32 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${Math.min(100, ((userXp.xp - Math.pow(userXp.level - 1, 2) * 100) / (Math.pow(userXp.level, 2) * 100 - Math.pow(userXp.level - 1, 2) * 100)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground">{userXp.xp} XP</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {!profile ? (

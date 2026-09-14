@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 /**
  * SM-2 algorithm:
@@ -85,10 +86,17 @@ export async function POST(
     },
   });
 
+  // Award XP for correct solve
+  let xpResult: { xp: number; level: number; leveledUp: boolean } | null = null;
+  if (correct) {
+    xpResult = await awardXp(dbUser.id, XP_REWARDS.PUZZLE_CORRECT);
+  }
+
   return NextResponse.json({
     success: true,
     nextReviewAt,
     interval,
+    xp: xpResult,
     message: correct
       ? `✅ Correct! Next review in ${interval} day${interval === 1 ? '' : 's'}`
       : `❌ Try again. Due again tomorrow.`,

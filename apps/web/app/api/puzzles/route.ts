@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/puzzles — returns today's due puzzles, worst skill area first
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const supabase = await createClient();
   const {
     data: { user },

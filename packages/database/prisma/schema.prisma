@@ -34,14 +34,18 @@ enum MoveQuality {
 }
 
 model User {
-  id          String   @id @default(uuid()) @db.Uuid
-  supabaseId  String   @unique @map("supabase_id")
-  email       String   @unique
-  displayName String?  @map("display_name")
-  avatarUrl   String?  @map("avatar_url")
-  role        UserRole @default(PLAYER)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid()) @db.Uuid
+  supabaseId       String   @unique @map("supabase_id")
+  email            String   @unique
+  displayName      String?  @map("display_name")
+  avatarUrl        String?  @map("avatar_url")
+  lichessUsername  String?  @map("lichess_username")
+  chessComUsername String?  @map("chess_com_username")
+  role             UserRole @default(PLAYER)
+  xp               Int      @default(0)
+  level            Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   games        Game[]
   skillProfile SkillProfile?
