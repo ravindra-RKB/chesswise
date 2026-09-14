@@ -4,12 +4,12 @@ import { redirect } from 'next/navigation';
 import { LogoutButton } from './logout-button';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: '🏠' },
-  { href: '/dashboard', label: 'Play', icon: '♟', disabled: true },
-  { href: '/dashboard', label: 'Analyze', icon: '📊', disabled: true },
-  { href: '/dashboard', label: 'Train', icon: '🎯', disabled: true },
-  { href: '/dashboard', label: 'Profile', icon: '📈', disabled: true },
-  { href: '/dashboard', label: 'Settings', icon: '⚙️', disabled: true },
+  { href: '/dashboard', label: 'Dashboard', icon: '🏠', disabled: false },
+  { href: '/play', label: 'Play', icon: '♟', disabled: false },
+  { href: '/analyze', label: 'Analyze', icon: '📊', disabled: false },
+  { href: '/train', label: 'Train', icon: '🎯', disabled: true },
+  { href: '/profile', label: 'Profile', icon: '📈', disabled: true },
+  { href: '/settings', label: 'Settings', icon: '⚙️', disabled: true },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

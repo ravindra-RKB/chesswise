@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { AnnotationGlyph } from '@/components/chess/annotation-glyph';
+import { createClient } from '@/lib/supabase/server';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
@@ -10,18 +16,29 @@ export default function LandingPage() {
           <span className="font-serif text-xl font-bold text-foreground">Chesswise</span>
         </div>
         <nav className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Sign In
-          </Link>
-          <Link
-            href="/register"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Get Started
-          </Link>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Go to Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
         </nav>
       </header>
 
