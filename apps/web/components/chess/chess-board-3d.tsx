@@ -48,13 +48,16 @@ function Piece({ data, orientation, onClick, isSelected }: any) {
   const queenGLTF = useGLTF('/queen.gltf') as any;
   const kingGLTF = useGLTF('/king.gltf') as any;
 
+  const getGeom = (gltf: any) =>
+    (Object.values(gltf.nodes).find((n: any) => n.geometry) as any)?.geometry;
+
   const typeMap = {
-    p: pawnGLTF.nodes.Object001.geometry,
-    n: knightGLTF.nodes.Object001.geometry,
-    b: bishopGLTF.nodes.Object001.geometry,
-    r: rookGLTF.nodes.Object001.geometry,
-    q: queenGLTF.nodes.Object001.geometry,
-    k: kingGLTF.nodes.Object001.geometry,
+    p: getGeom(pawnGLTF),
+    n: getGeom(knightGLTF),
+    b: getGeom(bishopGLTF),
+    r: getGeom(rookGLTF),
+    q: getGeom(queenGLTF),
+    k: getGeom(kingGLTF),
   };
 
   const geometry = typeMap[data.type.toLowerCase() as keyof typeof typeMap];
