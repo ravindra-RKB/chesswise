@@ -128,6 +128,26 @@ function EvalGraph({
 // Mistake Card
 function MistakeCard({ move, onTryIt }: { move: GameMove; onTryIt: (fen: string) => void }) {
   const glyph = move.quality ? QUALITY_GLYPH[move.quality] : null;
+  const [overriding, setOverriding] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [overridden, setOverridden] = useState(false);
+
+  const submitOverride = async () => {
+    if (!overrideReason.trim()) return;
+    await fetch('/api/audit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entityType: 'game_move',
+        entityId: move.id,
+        action: 'override',
+        reason: overrideReason,
+        metadata: { quality: move.quality, san: move.san },
+      }),
+    });
+    setOverridden(true);
+    setOverriding(false);
+  };
 
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-4">
@@ -140,6 +160,11 @@ function MistakeCard({ move, onTryIt }: { move: GameMove; onTryIt: (fen: string)
         {move.tacticTag && (
           <span className="ml-auto rounded bg-muted px-2 py-0.5 text-[10px] capitalize text-muted-foreground">
             {move.tacticTag.replace(/_/g, ' ')}
+          </span>
+        )}
+        {overridden && (
+          <span className="ml-auto rounded bg-good/20 px-2 py-0.5 text-[10px] text-good">
+            Overridden ✓
           </span>
         )}
       </div>
@@ -159,12 +184,52 @@ function MistakeCard({ move, onTryIt }: { move: GameMove; onTryIt: (fen: string)
         <p className="text-sm leading-relaxed text-foreground/80">{move.explanation}</p>
       )}
 
-      <button
-        onClick={() => onTryIt(move.fenBefore)}
-        className="text-xs text-[#C9A24B] hover:underline"
-      >
-        Try it in Analysis →
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={() => onTryIt(move.fenBefore)}
+          className="text-xs text-[#C9A24B] hover:underline"
+        >
+          Try it in Analysis →
+        </button>
+        {!overridden && !overriding && (
+          <button
+            onClick={() => setOverriding(true)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Disagree with AI?
+          </button>
+        )}
+      </div>
+
+      {overriding && (
+        <div className="space-y-2 border-t border-border pt-1">
+          <p className="text-xs text-muted-foreground">
+            State your reason for overriding this classification:
+          </p>
+          <textarea
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            placeholder="e.g. This was forced — there was no better move available."
+            rows={2}
+            className="w-full resize-none rounded border border-border bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={submitOverride}
+              disabled={!overrideReason.trim()}
+              className="rounded bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            >
+              Submit Override
+            </button>
+            <button
+              onClick={() => setOverriding(false)}
+              className="rounded border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

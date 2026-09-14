@@ -204,6 +204,9 @@ async function processGame(gameId: string): Promise<void> {
     data: { status: GameStatus.EXPLANATION_READY },
   });
 
+  // Extract puzzle cards from blunders and mistakes
+  await extractPuzzleCards(game.userId, gameId);
+
   // Update skill profile
   await updateSkillProfile(game.userId, gameId);
 
@@ -213,6 +216,44 @@ async function processGame(gameId: string): Promise<void> {
   });
 
   console.log(`[worker] Game ${gameId} fully processed!`);
+}
+
+async function extractPuzzleCards(userId: string, gameId: string): Promise<void> {
+  // Fetch all mistake/blunder moves for this game with their stored IDs
+  const mistakeMoves = await prisma.gameMove.findMany({
+    where: {
+      gameId,
+      quality: { in: ['MISTAKE', 'BLUNDER'] },
+      bestMoveUci: { not: null },
+    },
+    select: { id: true, fenBefore: true, bestMoveUci: true, quality: true },
+  });
+
+  if (mistakeMoves.length === 0) return;
+
+  // Check which ones already have puzzle cards (avoid duplicates on retry)
+  const existing = await prisma.puzzleCard.findMany({
+    where: { gameId, userId },
+    select: { gameMoveId: true },
+  });
+  const existingIds = new Set(existing.map((e) => e.gameMoveId));
+
+  const puzzles = mistakeMoves
+    .filter((m) => !existingIds.has(m.id) && m.bestMoveUci)
+    .map((m) => ({
+      userId,
+      gameId,
+      gameMoveId: m.id,
+      fen: m.fenBefore,
+      solution: m.bestMoveUci!,
+      quality: m.quality!,
+      nextReviewAt: new Date(), // due immediately
+    }));
+
+  if (puzzles.length > 0) {
+    await prisma.puzzleCard.createMany({ data: puzzles });
+    console.log(`[worker] Created ${puzzles.length} puzzle cards`);
+  }
 }
 
 async function updateSkillProfile(userId: string, gameId: string): Promise<void> {

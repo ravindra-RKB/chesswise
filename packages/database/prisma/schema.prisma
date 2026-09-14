@@ -129,3 +129,18 @@ model PuzzleCard {
   @@index([userId, nextReviewAt])
   @@map("puzzle_cards")
 }
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  entityType String   @map("entity_type") // "game" | "game_move" | "puzzle"
+  entityId   String   @map("entity_id") @db.Uuid
+  action     String   // "override" | "retry" | "explain_generated" | "puzzle_solved" | ...
+  reason     String?  // user-provided reason for override
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}

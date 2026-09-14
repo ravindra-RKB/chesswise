@@ -123,6 +123,12 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<SkillProfile | null>(null);
   const [gameCount, setGameCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [puzzleStats, setPuzzleStats] = useState<{
+    dueToday: number;
+    streak: number;
+    totalSolved: number;
+    accuracy7d: number | null;
+  } | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -132,10 +138,14 @@ export default function ProfilePage() {
       fetch('/api/games')
         .then((r) => r.json())
         .catch(() => ({ games: [] })),
+      fetch('/api/puzzles/stats')
+        .then((r) => r.json())
+        .catch(() => null),
     ])
-      .then(([profileData, gamesData]) => {
+      .then(([profileData, gamesData, statsData]) => {
         setProfile(profileData?.profile ?? null);
         setGameCount(gamesData?.games?.length ?? 0);
+        setPuzzleStats(statsData ?? null);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -204,6 +214,41 @@ export default function ProfilePage() {
             <p className="text-center text-xs text-muted-foreground">
               Last updated: {new Date(profile.updatedAt).toLocaleString()}
             </p>
+          )}
+
+          {/* Training Stats */}
+          {puzzleStats && (
+            <div className="space-y-4 rounded-lg border border-border bg-card p-6">
+              <h2 className="text-sm font-semibold text-foreground">Training Stats</h2>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-[#C9A24B]">{puzzleStats.streak} 🔥</p>
+                  <p className="text-xs text-muted-foreground">Day Streak</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{puzzleStats.dueToday}</p>
+                  <p className="text-xs text-muted-foreground">Due Today</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">{puzzleStats.totalSolved}</p>
+                  <p className="text-xs text-muted-foreground">Total Solved</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-foreground">
+                    {puzzleStats.accuracy7d != null ? `${puzzleStats.accuracy7d}%` : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">7-Day Accuracy</p>
+                </div>
+              </div>
+              {puzzleStats.dueToday > 0 && (
+                <a
+                  href="/train"
+                  className="block rounded-lg bg-primary px-4 py-2 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Start Training ({puzzleStats.dueToday} due) →
+                </a>
+              )}
+            </div>
           )}
         </>
       )}
