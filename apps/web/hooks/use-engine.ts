@@ -17,6 +17,7 @@ export interface UseEngineReturn {
   stopAnalysis: () => void;
   setSkillLevel: (level: number) => void; // 0–20
   setDepth: (depth: number) => void;
+  debugLogs: string[];
 }
 
 export function useEngine(options: { depth?: number; skillLevel?: number } = {}): UseEngineReturn {
@@ -25,6 +26,7 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
   const [bestMove, setBestMove] = useState<string | null>(null);
   const [pv, setPv] = useState<string[]>([]);
   const [thinking, setThinking] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
   const workerRef = useRef<Worker | null>(null);
   const depthRef = useRef(options.depth ?? 16);
@@ -32,15 +34,21 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
   const currentFenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined') return;
 
-    // Pass the correct WASM filename via hash so stockfish.js knows what to load
-    const worker = new Worker('/stockfish/stockfish-18-lite.js#stockfish-18-lite.wasm');
+    // Load Stockfish Worker
+    const worker = new Worker('/stockfish/stockfish-18-lite.js');
     workerRef.current = worker;
 
+    worker.onerror = (err) => {
+      setDebugLogs((prev) => [...prev, `WORKER ERROR: ${err.message}`]);
+    };
+
     worker.onmessage = (e: MessageEvent<any>) => {
-      const line = typeof e.data === 'string' ? e.data.trim() : (e.data?.data || '').trim();
+      const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
+      const line = raw.trim();
+
+      setDebugLogs((prev) => [...prev.slice(-9), `MSG: ${line}`]);
 
       if (line === 'uciok') {
         worker.postMessage('isready');
@@ -132,5 +140,6 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
     stopAnalysis,
     setSkillLevel,
     setDepth,
+    debugLogs,
   };
 }

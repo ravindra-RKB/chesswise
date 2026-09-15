@@ -252,8 +252,13 @@ export default function PlayPage() {
 
         {/* Engine Status */}
         {!engine.isReady && (
-          <div className="animate-pulse rounded border border-[#C9A24B]/30 bg-[#C9A24B]/10 px-3 py-2 text-center text-xs text-[#C9A24B]">
-            Engine loading...
+          <div className="flex flex-col gap-2 rounded border border-[#C9A24B]/30 bg-[#C9A24B]/10 px-3 py-2 text-xs text-[#C9A24B]">
+            <div className="animate-pulse text-center font-bold">Engine loading...</div>
+            <div className="max-h-32 overflow-y-auto text-[10px] opacity-70">
+              {engine.debugLogs.map((log, i) => (
+                <div key={i}>{log}</div>
+              ))}
+            </div>
           </div>
         )}
         {engine.isReady && engine.thinking && chess.turn === engineColor && (
