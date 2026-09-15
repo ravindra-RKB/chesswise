@@ -28,10 +28,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseId: user.id },
-    select: { role: true },
-  });
+  let dbUser = null;
+  try {
+    dbUser = await prisma.user.findUnique({
+      where: { supabaseId: user.id },
+      select: { role: true },
+    });
+  } catch (error) {
+    console.error('Failed to fetch user from Prisma:', error);
+  }
 
   const isCoach = dbUser?.role === 'COACH';
   const finalNavItems = isCoach
