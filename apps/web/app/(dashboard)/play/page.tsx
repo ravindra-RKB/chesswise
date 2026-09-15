@@ -7,29 +7,81 @@ import { useEngine } from '@/hooks/use-engine';
 import ChessBoard from '@/components/chess/chess-board';
 import MoveList from '@/components/chess/move-list';
 import { cn } from '@/lib/utils';
+import { getMirrorBotConfig, type SkillProfile } from '@/lib/mirror-bot';
 
-const DIFFICULTY_LEVELS = [
+const STATIC_DIFFICULTY_LEVELS = [
   { label: 'Beginner', elo: '~600', skillLevel: 0, depth: 5 },
   { label: 'Casual', elo: '~900', skillLevel: 5, depth: 8 },
   { label: 'Club', elo: '~1400', skillLevel: 10, depth: 12 },
   { label: 'Advanced', elo: '~1800', skillLevel: 15, depth: 16 },
   { label: 'Master', elo: '~2200+', skillLevel: 20, depth: 20 },
-];
+  { label: '🪞 Mirror', elo: 'Your nemesis', skillLevel: 10, depth: 14 },
+] as const;
 
 type DifficultyLevel = { label: string; elo: string; skillLevel: number; depth: number };
 
+// Whisper hint levels
+function getHint(bestMove: string | null, level: 1 | 2 | 3): string {
+  if (!bestMove) return 'Engine still thinking…';
+  const from = bestMove.slice(0, 2);
+  const to = bestMove.slice(2, 4);
+  const files = 'abcdefgh';
+  const fromFile = files.indexOf(from[0]!);
+  const toFile = files.indexOf(to[0]!);
+  const fileDiff = Math.abs(fromFile - toFile);
+  const rankDiff = Math.abs(parseInt(from[1]!) - parseInt(to[1]!));
+
+  if (level === 1) {
+    if (fileDiff === 1 && rankDiff === 2) return 'A knight move looks strong here.';
+    if (fileDiff === 0) return 'Consider moving along that file.';
+    if (rankDiff === 0) return 'A horizontal move could improve your position.';
+    return 'Look for an active move that improves a piece.';
+  }
+  if (level === 2) {
+    return `The piece on ${from} has a better square available.`;
+  }
+  // Level 3: reveal exact move
+  return `Best move: ${from}→${to}`;
+}
+
 export default function PlayPage() {
   const [difficulty, setDifficulty] = useState<DifficultyLevel>(
-    DIFFICULTY_LEVELS[2] as DifficultyLevel,
+    STATIC_DIFFICULTY_LEVELS[2] as DifficultyLevel,
   );
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [gameStatus, setGameStatus] = useState<string>('');
   const [engineColor, setEngineColor] = useState<'w' | 'b'>('b');
 
-  const chess = useChess();
-  const engine = useEngine({ skillLevel: difficulty!.skillLevel, depth: difficulty!.depth });
+  // Mirror Bot
+  const [mirrorProfile, setMirrorProfile] = useState<SkillProfile | null>(null);
+  const [mirrorInfo, setMirrorInfo] = useState<string>('');
 
-  // Find the checked king square
+  // Whisper Coach
+  const [hintLevel, setHintLevel] = useState<0 | 1 | 2 | 3>(0);
+  const [hintText, setHintText] = useState<string>('');
+  const [xp, setXp] = useState<number | null>(null);
+
+  const chess = useChess();
+  const engine = useEngine({ skillLevel: difficulty.skillLevel, depth: difficulty.depth });
+
+  // Load profile for Mirror Bot
+  useEffect(() => {
+    fetch('/api/profile')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.profile) setMirrorProfile(d.profile);
+      })
+      .catch(() => null);
+    // Load user XP for hint display
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.settings) setXp(d.settings.xp);
+      })
+      .catch(() => null);
+  }, []);
+
+  // Find checked king square
   const checkedKingSquare = chess.isCheck
     ? (() => {
         const board = chess.game.board();
@@ -47,7 +99,7 @@ export default function PlayPage() {
       })()
     : null;
 
-  // Update game status message
+  // Update game status
   useEffect(() => {
     if (chess.isCheckmate) {
       const winner = chess.turn === 'w' ? 'Black' : 'White';
@@ -61,6 +113,9 @@ export default function PlayPage() {
     } else {
       setGameStatus('');
     }
+    // Reset hints on each move
+    setHintLevel(0);
+    setHintText('');
   }, [chess.isCheckmate, chess.isStalemate, chess.isDraw, chess.isCheck, chess.turn]);
 
   // Engine makes its move when it's its turn
@@ -70,7 +125,7 @@ export default function PlayPage() {
     }
   }, [chess.fen, chess.turn, chess.isGameOver, engineColor, engine]);
 
-  // Apply engine bestMove to the board
+  // Apply engine bestMove
   useEffect(() => {
     if (engine.bestMove && chess.turn === engineColor && !chess.isGameOver) {
       const from = engine.bestMove.slice(0, 2) as Square;
@@ -78,14 +133,14 @@ export default function PlayPage() {
       const promotion = engine.bestMove[4] as 'q' | 'r' | 'b' | 'n' | undefined;
       setTimeout(() => {
         chess.makeMove(from, to, promotion);
-      }, 200); // slight delay for natural feel
+      }, 200);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.bestMove]);
 
   const handlePlayerMove = useCallback(
     (from: Square, to: Square, promotion?: string) => {
-      if (chess.turn === engineColor) return; // not player's turn
+      if (chess.turn === engineColor) return;
       chess.makeMove(from, to, promotion as 'q' | 'r' | 'b' | 'n' | undefined);
     },
     [chess, engineColor],
@@ -95,7 +150,8 @@ export default function PlayPage() {
     chess.resetGame();
     engine.stopAnalysis();
     setGameStatus('');
-    // Optionally keep same orientation
+    setHintLevel(0);
+    setHintText('');
   };
 
   const handleFlipBoard = () => {
@@ -103,10 +159,48 @@ export default function PlayPage() {
     setEngineColor((c) => (c === 'w' ? 'b' : 'w'));
   };
 
-  const handleDifficultyChange = (d: (typeof DIFFICULTY_LEVELS)[number]) => {
-    setDifficulty(d);
-    engine.setSkillLevel(d.skillLevel);
-    engine.setDepth(d.depth);
+  const handleDifficultyChange = (d: DifficultyLevel) => {
+    if (d.label === '🪞 Mirror' && mirrorProfile) {
+      const config = getMirrorBotConfig(mirrorProfile);
+      setDifficulty({ ...d, skillLevel: config.skillLevel, depth: config.depth });
+      engine.setSkillLevel(config.skillLevel);
+      engine.setDepth(config.depth);
+      setMirrorInfo(config.description);
+    } else {
+      setDifficulty(d);
+      engine.setSkillLevel(d.skillLevel);
+      engine.setDepth(d.depth);
+      setMirrorInfo('');
+    }
+  };
+
+  // Whisper Coach: request a hint
+  const handleHint = async () => {
+    const nextLevel = Math.min(3, hintLevel + 1) as 1 | 2 | 3;
+
+    // Spend 5 XP per hint request
+    try {
+      const res = await fetch('/api/xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: 5, reason: 'whisper_hint' }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setXp(data.xp);
+      }
+    } catch {
+      /* continue even if XP deduction fails */
+    }
+
+    // Run engine analysis on current position for the player
+    engine.analyzePosition(chess.fen);
+    // Give engine a moment then show hint
+    setTimeout(() => {
+      const hint = getHint(engine.bestMove, nextLevel);
+      setHintText(hint);
+      setHintLevel(nextLevel);
+    }, 800);
   };
 
   const lastMove =
@@ -116,6 +210,8 @@ export default function PlayPage() {
           to: chess.history[chess.history.length - 1]!.to as Square,
         }
       : null;
+
+  const isPlayerTurn = chess.turn !== engineColor && !chess.isGameOver;
 
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
@@ -154,19 +250,56 @@ export default function PlayPage() {
           </div>
         )}
 
+        {/* Whisper Coach Hint */}
+        {isPlayerTurn && (
+          <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground">💡 Whisper Coach</span>
+              {xp !== null && <span className="text-[10px] text-muted-foreground">{xp} XP</span>}
+            </div>
+            {hintText ? (
+              <p className="text-xs leading-relaxed text-foreground/80">{hintText}</p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">
+                Stuck? Ask for a hint (costs 5 XP)
+              </p>
+            )}
+            <button
+              onClick={handleHint}
+              disabled={hintLevel >= 3}
+              className="w-full rounded-md bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/60 disabled:opacity-40"
+            >
+              {hintLevel === 0 && 'Get Hint (5 XP)'}
+              {hintLevel === 1 && 'More specific (5 XP)'}
+              {hintLevel === 2 && 'Show move (5 XP)'}
+              {hintLevel === 3 && 'Full hint revealed'}
+            </button>
+          </div>
+        )}
+
+        {/* Mirror Bot info */}
+        {mirrorInfo && (
+          <div className="rounded-lg border border-[#C9A24B]/30 bg-[#C9A24B]/5 px-3 py-2 text-xs text-[#C9A24B]">
+            🪞 {mirrorInfo}
+          </div>
+        )}
+
         {/* Difficulty selector */}
         <div className="space-y-2 rounded-lg border border-border bg-card p-4">
           <h3 className="text-sm font-semibold text-foreground">Difficulty</h3>
           <div className="grid grid-cols-1 gap-1">
-            {DIFFICULTY_LEVELS.map((d) => (
+            {STATIC_DIFFICULTY_LEVELS.map((d) => (
               <button
                 key={d.label}
-                onClick={() => handleDifficultyChange(d)}
+                onClick={() => handleDifficultyChange(d as DifficultyLevel)}
+                disabled={d.label === '🪞 Mirror' && !mirrorProfile}
                 className={cn(
                   'flex items-center justify-between rounded px-3 py-1.5 text-sm transition-colors',
-                  difficulty.label === d.label
+                  difficulty.label === d.label ||
+                    (difficulty.label === '🪞 Mirror' && d.label === '🪞 Mirror')
                     ? 'bg-[#C9A24B]/20 font-semibold text-[#C9A24B]'
                     : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                  d.label === '🪞 Mirror' && !mirrorProfile && 'cursor-not-allowed opacity-40',
                 )}
               >
                 <span>{d.label}</span>
@@ -174,6 +307,11 @@ export default function PlayPage() {
               </button>
             ))}
           </div>
+          {!mirrorProfile && (
+            <p className="text-[10px] text-muted-foreground">
+              Import &amp; analyze a game to unlock Mirror Bot.
+            </p>
+          )}
         </div>
 
         {/* Move list */}

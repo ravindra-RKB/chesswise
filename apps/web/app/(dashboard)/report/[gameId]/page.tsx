@@ -7,6 +7,7 @@ import { useChess } from '@/hooks/use-chess';
 import ChessBoard from '@/components/chess/chess-board';
 import { AnnotationGlyph } from '@/components/chess/annotation-glyph';
 import ChatPanel from '@/components/coach/chat-panel';
+import BranchExplorer from '@/components/chess/branch-explorer';
 import { cn } from '@/lib/utils';
 
 type MoveQuality = 'BRILLIANT' | 'EXCELLENT' | 'GOOD' | 'INACCURACY' | 'MISTAKE' | 'BLUNDER';
@@ -131,10 +132,12 @@ function MistakeCard({
   move,
   onTryIt,
   onAskCoach,
+  onExplore,
 }: {
   move: GameMove;
   onTryIt: (fen: string) => void;
   onAskCoach?: (san: string, quality: string) => void;
+  onExplore?: (fen: string, label: string) => void;
 }) {
   const glyph = move.quality ? QUALITY_GLYPH[move.quality] : null;
   const [overriding, setOverriding] = useState(false);
@@ -208,6 +211,17 @@ function MistakeCard({
             💬 Ask Coach
           </button>
         )}
+        {onExplore && (
+          <button
+            onClick={() =>
+              onExplore(move.fenBefore, `${Math.ceil(move.moveNumber / 2)}. ${move.san}`)
+            }
+            className="text-xs text-purple-400 hover:underline"
+          >
+            🔀 Explore
+          </button>
+        )}
+
         {!overridden && !overriding && (
           <button
             onClick={() => setOverriding(true)}
@@ -261,6 +275,8 @@ export default function ReportPage() {
   const [currentMoveIdx, setCurrentMoveIdx] = useState(-1);
   const [coachOpen, setCoachOpen] = useState(false);
   const [coachMessage, setCoachMessage] = useState('');
+  const [branchFen, setBranchFen] = useState<string | null>(null);
+  const [branchLabel, setBranchLabel] = useState('');
 
   const chess = useChess();
 
@@ -296,6 +312,11 @@ export default function ReportPage() {
       `In this game, I played ${san} which was a ${quality.toLowerCase()}. Why was this a mistake and what should I have played instead?`,
     );
     setCoachOpen(true);
+  };
+
+  const handleExplore = (fen: string, label: string) => {
+    setBranchFen(fen);
+    setBranchLabel(label);
   };
 
   if (loading) {
@@ -465,6 +486,7 @@ export default function ReportPage() {
                     move={m}
                     onTryIt={handleTryIt}
                     onAskCoach={handleAskCoach}
+                    onExplore={handleExplore}
                   />
                 ))}
               </div>
@@ -500,6 +522,15 @@ export default function ReportPage() {
             onClose={() => setCoachOpen(false)}
           />
         </div>
+      )}
+
+      {/* What-if Branch Explorer modal */}
+      {branchFen && (
+        <BranchExplorer
+          startFen={branchFen}
+          moveLabel={branchLabel}
+          onClose={() => setBranchFen(null)}
+        />
       )}
     </div>
   );
