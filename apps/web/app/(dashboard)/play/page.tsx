@@ -138,12 +138,12 @@ export default function PlayPage() {
       const from = engine.bestMove.slice(0, 2) as Square;
       const to = engine.bestMove.slice(2, 4) as Square;
       const promotion = engine.bestMove[4] as 'q' | 'r' | 'b' | 'n' | undefined;
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         chess.makeMove(from, to, promotion);
       }, 200);
+      return () => clearTimeout(timer);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine.bestMove]);
+  }, [engine.bestMove, chess.turn, chess.isGameOver, engineColor, chess.makeMove]);
 
   const handlePlayerMove = useCallback(
     (from: Square, to: Square, promotion?: string) => {
@@ -250,8 +250,13 @@ export default function PlayPage() {
           </div>
         )}
 
-        {/* Engine thinking */}
-        {engine.thinking && chess.turn === engineColor && (
+        {/* Engine Status */}
+        {!engine.isReady && (
+          <div className="animate-pulse rounded border border-[#C9A24B]/30 bg-[#C9A24B]/10 px-3 py-2 text-center text-xs text-[#C9A24B]">
+            Engine loading...
+          </div>
+        )}
+        {engine.isReady && engine.thinking && chess.turn === engineColor && (
           <div className="animate-pulse text-center text-xs text-muted-foreground">
             Engine thinking...
           </div>

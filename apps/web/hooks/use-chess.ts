@@ -44,7 +44,11 @@ export function useChess(startFen?: string): UseChessReturn {
   const makeMove = useCallback((from: Square, to: Square, promotion?: PieceSymbol): Move | null => {
     let result: Move | null = null;
     setGame((prev) => {
-      const next = new Chess(prev.fen());
+      const history = prev.history({ verbose: true }) as Move[];
+      const next = new Chess();
+      for (const m of history) {
+        next.move(m);
+      }
       try {
         result = next.move({ from, to, promotion: promotion ?? 'q' });
         setHistoryIndex(next.history().length - 1);
@@ -58,7 +62,11 @@ export function useChess(startFen?: string): UseChessReturn {
 
   const undoMove = useCallback(() => {
     setGame((prev) => {
-      const next = new Chess(prev.fen());
+      const history = prev.history({ verbose: true }) as Move[];
+      const next = new Chess();
+      for (const m of history) {
+        next.move(m);
+      }
       next.undo();
       setHistoryIndex(next.history().length - 1);
       return next;
