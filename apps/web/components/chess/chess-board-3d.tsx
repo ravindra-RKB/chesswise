@@ -77,7 +77,7 @@ function Piece({ data, orientation, onClick, isSelected }: any) {
     <a.mesh
       position={position as any}
       rotation={rotation}
-      scale={[0.03, 0.03, 0.03]}
+      scale={[0.0045, 0.0045, 0.0045]}
       geometry={geometry}
       castShadow
       receiveShadow
@@ -213,7 +213,7 @@ export default function ChessBoard3D({
 
   return (
     <div className="h-full min-h-[600px] w-full overflow-hidden rounded-lg bg-[#222] ring-4 ring-[#333]">
-      <Canvas shadows camera={{ position: [0, 5, 7], fov: 45 }}>
+      <Canvas shadows camera={{ position: [0, 6, 8], fov: 45 }}>
         <ambientLight intensity={0.5} />
         <spotLight position={[10, 10, 10]} angle={0.2} penumbra={1} intensity={1} castShadow />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
