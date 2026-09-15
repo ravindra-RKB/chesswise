@@ -12,7 +12,8 @@
     "db:generate": "turbo db:generate",
     "db:push": "turbo db:push",
     "clean": "turbo clean",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "turbo db:generate"
   },
   "devDependencies": {
     "husky": "^9.1.0",

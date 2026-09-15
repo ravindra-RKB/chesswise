@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { LogoutButton } from './logout-button';
+import { prisma } from '@/lib/prisma';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠', disabled: false },
@@ -27,8 +28,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
-  // Import prisma dynamically to fetch role
-  const { prisma } = await import('@/lib/prisma');
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: user.id },
     select: { role: true },
