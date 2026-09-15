@@ -35,11 +35,12 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
     // Only run in browser
     if (typeof window === 'undefined') return;
 
-    const worker = new Worker('/stockfish/stockfish-18-lite.js');
+    // Use a wrapper worker to ensure WASM loads correctly from the /stockfish directory
+    const worker = new Worker('/stockfish/worker.js');
     workerRef.current = worker;
 
-    worker.onmessage = (e: MessageEvent<string>) => {
-      const line = e.data;
+    worker.onmessage = (e: MessageEvent<any>) => {
+      const line = typeof e.data === 'string' ? e.data.trim() : (e.data?.data || '').trim();
 
       if (line === 'uciok') {
         worker.postMessage('isready');
@@ -68,6 +69,7 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
         }
       }
 
+      // Parse best move
       if (line.startsWith('bestmove')) {
         const parts = line.split(' ');
         const move = parts[1];
