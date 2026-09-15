@@ -35,8 +35,8 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
     // Only run in browser
     if (typeof window === 'undefined') return;
 
-    // Use a wrapper worker to ensure WASM loads correctly from the /stockfish directory
-    const worker = new Worker('/stockfish/worker.js');
+    // Pass the correct WASM filename via hash so stockfish.js knows what to load
+    const worker = new Worker('/stockfish/stockfish-18-lite.js#stockfish-18-lite.wasm');
     workerRef.current = worker;
 
     worker.onmessage = (e: MessageEvent<any>) => {
