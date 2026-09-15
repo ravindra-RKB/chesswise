@@ -36,72 +36,90 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Load Stockfish Worker
-    const worker = new Worker('/stockfish/stockfish-18-lite.js');
-    workerRef.current = worker;
+    let worker: Worker | null = null;
+    let objectUrl: string | null = null;
 
-    worker.onerror = (err) => {
-      let msg = 'Unknown';
-      if (err instanceof ErrorEvent) {
-        msg = err.message || 'ErrorEvent without message';
-      } else if (err && typeof err === 'object') {
-        msg = JSON.stringify(err, ['message', 'filename', 'lineno', 'colno', 'error', 'type']);
-      } else {
-        msg = String(err);
-      }
-      setDebugLogs((prev) => [...prev, `WORKER ERROR: ${msg}`]);
-    };
+    // Fetch the JS file to create a Blob Worker.
+    // This completely bypasses Vercel CDN COEP header stripping on static files!
+    fetch('/stockfish/stockfish-18-lite.js')
+      .then((res) => {
+        if (!res.ok) throw new Error(`JS Fetch Failed: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        // Pass the ABSOLUTE URL to the WASM file in the hash so the blob worker knows where to fetch it
+        const wasmUrl = new URL('/stockfish/stockfish.wasm', window.location.href).href;
+        worker = new Worker(`${objectUrl}#${wasmUrl}`);
+        workerRef.current = worker;
 
-    worker.onmessage = (e: MessageEvent<any>) => {
-      const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
-      const line = raw.trim();
+        worker.onerror = (err) => {
+          let msg = 'Unknown';
+          if (err instanceof ErrorEvent) {
+            msg = err.message || 'ErrorEvent without message';
+          } else if (err && typeof err === 'object') {
+            msg = JSON.stringify(err, ['message', 'filename', 'lineno', 'colno', 'error', 'type']);
+          } else {
+            msg = String(err);
+          }
+          setDebugLogs((prev) => [...prev, `WORKER ERROR: ${msg}`]);
+        };
 
-      setDebugLogs((prev) => [...prev.slice(-9), `MSG: ${line}`]);
+        worker.onmessage = (e: MessageEvent<any>) => {
+          const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
+          const line = raw.trim();
 
-      if (line === 'uciok') {
-        worker.postMessage('isready');
-      }
+          setDebugLogs((prev) => [...prev.slice(-9), `MSG: ${line}`]);
 
-      if (line === 'readyok') {
-        setIsReady(true);
-        // Apply initial skill level
-        worker.postMessage(`setoption name Skill Level value ${skillRef.current}`);
-      }
+          if (line === 'uciok') {
+            worker!.postMessage('isready');
+          }
 
-      if (line.startsWith('info') && line.includes('score')) {
-        // Parse evaluation
-        const cpMatch = line.match(/score cp (-?\d+)/);
-        const mateMatch = line.match(/score mate (-?\d+)/);
-        const pvMatch = line.match(/ pv (.+)/);
+          if (line === 'readyok') {
+            setIsReady(true);
+            worker!.postMessage(`setoption name Skill Level value ${skillRef.current}`);
+          }
 
-        if (cpMatch) {
-          setEvaluation({ type: 'cp', value: parseInt(cpMatch[1]!) });
-        } else if (mateMatch) {
-          setEvaluation({ type: 'mate', value: parseInt(mateMatch[1]!) });
-        }
+          if (line.startsWith('info') && line.includes('score')) {
+            const cpMatch = line.match(/score cp (-?\d+)/);
+            const mateMatch = line.match(/score mate (-?\d+)/);
+            const pvMatch = line.match(/ pv (.+)/);
 
-        if (pvMatch) {
-          setPv(pvMatch[1]!.trim().split(' '));
-        }
-      }
+            if (cpMatch) {
+              setEvaluation({ type: 'cp', value: parseInt(cpMatch[1]!) });
+            } else if (mateMatch) {
+              setEvaluation({ type: 'mate', value: parseInt(mateMatch[1]!) });
+            }
 
-      // Parse best move
-      if (line.startsWith('bestmove')) {
-        const parts = line.split(' ');
-        const move = parts[1];
-        if (move && move !== '(none)') {
-          setBestMove(move);
-        }
-        setThinking(false);
-      }
-    };
+            if (pvMatch) {
+              setPv(pvMatch[1]!.trim().split(' '));
+            }
+          }
 
-    // Start UCI handshake
-    worker.postMessage('uci');
+          if (line.startsWith('bestmove')) {
+            const parts = line.split(' ');
+            const move = parts[1];
+            if (move && move !== '(none)') {
+              setBestMove(move);
+            }
+            setThinking(false);
+          }
+        };
+
+        worker.postMessage('uci');
+      })
+      .catch((err) => {
+        setDebugLogs((prev) => [...prev, `BLOB ERROR: ${err.message}`]);
+      });
 
     return () => {
-      worker.postMessage('quit');
-      worker.terminate();
+      if (worker) {
+        worker.postMessage('quit');
+        worker.terminate();
+      }
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
     };
   }, []);
 
