@@ -41,7 +41,15 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
     workerRef.current = worker;
 
     worker.onerror = (err) => {
-      setDebugLogs((prev) => [...prev, `WORKER ERROR: ${err.message}`]);
+      let msg = 'Unknown';
+      if (err instanceof ErrorEvent) {
+        msg = err.message || 'ErrorEvent without message';
+      } else if (err && typeof err === 'object') {
+        msg = JSON.stringify(err, ['message', 'filename', 'lineno', 'colno', 'error', 'type']);
+      } else {
+        msg = String(err);
+      }
+      setDebugLogs((prev) => [...prev, `WORKER ERROR: ${msg}`]);
     };
 
     worker.onmessage = (e: MessageEvent<any>) => {
