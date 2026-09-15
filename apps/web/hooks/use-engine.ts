@@ -36,7 +36,7 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const worker = new Worker('/stockfish/stockfish-18-lite.js');
+    const worker = new Worker('/stockfish/stockfish-10.js');
     workerRef.current = worker;
 
     worker.onerror = (err) => {
