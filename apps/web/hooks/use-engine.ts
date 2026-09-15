@@ -36,117 +36,69 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let worker: Worker | null = null;
-    let objectUrl: string | null = null;
+    const worker = new Worker('/stockfish/stockfish-18-lite.js');
+    workerRef.current = worker;
 
-    // Fetch the JS file to create a Blob Worker.
-    // We inject console interceptors to see exactly what fails inside Emscripten!
-    fetch('/stockfish/stockfish-18-lite.js')
-      .then((res) => {
-        if (!res.ok) throw new Error(`JS Fetch Failed: ${res.status}`);
-        return res.text();
-      })
-      .then((code) => {
-        const interceptor = `
-          var Module = {
-            locateFile: function(path, prefix) {
-              if (path.endsWith('.wasm')) {
-                return '${new URL('/stockfish/stockfish.wasm', window.location.href).href}';
-              }
-              // For pthread workers, Emscripten needs the worker script.
-              // We return our own Blob URL so the sub-workers inherit the COEP headers too!
-              return self.location.href;
-            }
-          };
-          const oldLog = console.log;
-          console.log = function(...args) { postMessage({ type: 'debug', level: 'log', args }); oldLog(...args); };
-          const oldErr = console.error;
-          console.error = function(...args) { postMessage({ type: 'debug', level: 'error', args }); oldErr(...args); };
-          const oldWarn = console.warn;
-          console.warn = function(...args) { postMessage({ type: 'debug', level: 'warn', args }); oldWarn(...args); };
-          self.onunhandledrejection = (e) => postMessage({ type: 'debug', level: 'unhandled', reason: String(e.reason) });
-        `;
-        const blob = new Blob([interceptor + code], { type: 'application/javascript' });
-        objectUrl = URL.createObjectURL(blob);
-        worker = new Worker(objectUrl);
-        workerRef.current = worker;
+    worker.onerror = (err) => {
+      let msg = 'Unknown';
+      if (err instanceof ErrorEvent) {
+        msg = err.message || 'ErrorEvent without message';
+      } else if (err && typeof err === 'object') {
+        msg = JSON.stringify(err, ['message', 'filename', 'lineno', 'colno', 'error', 'type']);
+      } else {
+        msg = String(err);
+      }
+      setDebugLogs((prev) => [...prev, `WORKER ERROR: ${msg}`]);
+    };
 
-        worker.onerror = (err) => {
-          let msg = 'Unknown';
-          if (err instanceof ErrorEvent) {
-            msg = err.message || 'ErrorEvent without message';
-          } else if (err && typeof err === 'object') {
-            msg = JSON.stringify(err, ['message', 'filename', 'lineno', 'colno', 'error', 'type']);
-          } else {
-            msg = String(err);
-          }
-          setDebugLogs((prev) => [...prev, `WORKER ERROR: ${msg}`]);
-        };
+    worker.onmessage = (e: MessageEvent<any>) => {
+      const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
+      const line = raw.trim();
 
-        worker.onmessage = (e: MessageEvent<any>) => {
-          // Intercept our debug messages
-          if (e.data && e.data.type === 'debug') {
-            setDebugLogs((prev) => [
-              ...prev.slice(-14),
-              `[${e.data.level.toUpperCase()}] ${JSON.stringify(e.data.args || e.data.reason)}`,
-            ]);
-            return;
-          }
+      if (!line.startsWith('info depth')) {
+        setDebugLogs((prev) => [...prev.slice(-9), `MSG: ${line}`]);
+      }
 
-          const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
-          const line = raw.trim();
+      if (line === 'uciok') {
+        worker.postMessage('isready');
+      }
 
-          setDebugLogs((prev) => [...prev.slice(-14), `MSG: ${line}`]);
+      if (line === 'readyok') {
+        setIsReady(true);
+        worker.postMessage(`setoption name Skill Level value ${skillRef.current}`);
+      }
 
-          if (line === 'uciok') {
-            worker!.postMessage('isready');
-          }
+      if (line.startsWith('info') && line.includes('score')) {
+        const cpMatch = line.match(/score cp (-?\d+)/);
+        const mateMatch = line.match(/score mate (-?\d+)/);
+        const pvMatch = line.match(/ pv (.+)/);
 
-          if (line === 'readyok') {
-            setIsReady(true);
-            worker!.postMessage(`setoption name Skill Level value ${skillRef.current}`);
-          }
+        if (cpMatch) {
+          setEvaluation({ type: 'cp', value: parseInt(cpMatch[1]!) });
+        } else if (mateMatch) {
+          setEvaluation({ type: 'mate', value: parseInt(mateMatch[1]!) });
+        }
 
-          if (line.startsWith('info') && line.includes('score')) {
-            const cpMatch = line.match(/score cp (-?\d+)/);
-            const mateMatch = line.match(/score mate (-?\d+)/);
-            const pvMatch = line.match(/ pv (.+)/);
+        if (pvMatch) {
+          setPv(pvMatch[1]!.trim().split(' '));
+        }
+      }
 
-            if (cpMatch) {
-              setEvaluation({ type: 'cp', value: parseInt(cpMatch[1]!) });
-            } else if (mateMatch) {
-              setEvaluation({ type: 'mate', value: parseInt(mateMatch[1]!) });
-            }
+      if (line.startsWith('bestmove')) {
+        const parts = line.split(' ');
+        const move = parts[1];
+        if (move && move !== '(none)') {
+          setBestMove(move);
+        }
+        setThinking(false);
+      }
+    };
 
-            if (pvMatch) {
-              setPv(pvMatch[1]!.trim().split(' '));
-            }
-          }
-
-          if (line.startsWith('bestmove')) {
-            const parts = line.split(' ');
-            const move = parts[1];
-            if (move && move !== '(none)') {
-              setBestMove(move);
-            }
-            setThinking(false);
-          }
-        };
-
-        worker.postMessage('uci');
-      })
-      .catch((err) => {
-        setDebugLogs((prev) => [...prev, `BLOB ERROR: ${err.message}`]);
-      });
+    worker.postMessage('uci');
 
     return () => {
-      if (worker) {
-        worker.postMessage('quit');
-        worker.terminate();
-      }
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      worker.postMessage('quit');
+      worker.terminate();
     };
   }, []);
 
