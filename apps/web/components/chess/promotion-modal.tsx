@@ -27,31 +27,40 @@ export default function PromotionModal({ color, onSelect, onCancel }: PromotionM
 
   return (
     <div
-      className="absolute inset-0 z-50 flex items-center justify-center rounded bg-black/70"
+      className="absolute inset-0 z-50 flex items-center justify-center rounded bg-black/60 backdrop-blur-sm"
       onClick={onCancel}
     >
       <div
-        className="flex gap-2 rounded-lg border border-border bg-card p-3 shadow-2xl"
+        className="relative flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="absolute -top-6 left-0 whitespace-nowrap text-xs text-muted-foreground">
-          Choose promotion piece
-        </p>
-        {pieces.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => onSelect(p.value)}
-            className={cn(
-              'flex h-14 w-14 flex-col items-center justify-center rounded-md',
-              'border border-border hover:border-[#C9A24B] hover:bg-[#C9A24B]/10',
-              'cursor-pointer text-4xl transition-colors',
-            )}
-            title={p.name}
-          >
-            {p.symbol}
-            <span className="mt-1 text-[9px] text-muted-foreground">{p.name}</span>
-          </button>
-        ))}
+        <p className="text-sm font-medium text-muted-foreground">Choose promotion piece</p>
+        <div className="flex gap-2">
+          {pieces.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => onSelect(p.value)}
+              className={cn(
+                'flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg',
+                'border-2 border-transparent bg-background/50 hover:border-[#C9A24B] hover:bg-[#C9A24B]/10',
+                'cursor-pointer transition-all',
+              )}
+              title={p.name}
+            >
+              <span
+                className={cn(
+                  'text-5xl leading-none drop-shadow-md',
+                  color === 'w' ? 'text-white' : 'text-black',
+                )}
+              >
+                {p.symbol}
+              </span>
+              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {p.name}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
