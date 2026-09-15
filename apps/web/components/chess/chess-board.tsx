@@ -173,8 +173,8 @@ export default function ChessBoard({
                     className={cn(
                       'z-10 select-none text-[min(6vw,42px)] leading-none',
                       piece === piece.toUpperCase()
-                        ? 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
-                        : 'drop-shadow-[0_1px_2px_rgba(255,255,255,0.3)]',
+                        ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
+                        : 'text-black drop-shadow-[0_1px_2px_rgba(255,255,255,0.4)]',
                     )}
                     style={{ fontSize: 'min(6vw, 6vh, 42px)' }}
                   >

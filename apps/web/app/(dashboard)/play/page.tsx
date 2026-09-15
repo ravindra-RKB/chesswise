@@ -118,12 +118,19 @@ export default function PlayPage() {
     setHintText('');
   }, [chess.isCheckmate, chess.isStalemate, chess.isDraw, chess.isCheck, chess.turn]);
 
-  // Engine makes its move when it's its turn
   useEffect(() => {
     if (!chess.isGameOver && chess.turn === engineColor && engine.isReady) {
       engine.analyzePosition(chess.fen);
     }
-  }, [chess.fen, chess.turn, chess.isGameOver, engineColor, engine]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    chess.fen,
+    chess.turn,
+    chess.isGameOver,
+    engineColor,
+    engine.isReady,
+    engine.analyzePosition,
+  ]);
 
   // Apply engine bestMove
   useEffect(() => {
