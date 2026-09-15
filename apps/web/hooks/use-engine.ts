@@ -40,13 +40,23 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
     let objectUrl: string | null = null;
 
     // Fetch the JS file to create a Blob Worker.
-    // This completely bypasses Vercel CDN COEP header stripping on static files!
+    // We inject console interceptors to see exactly what fails inside Emscripten!
     fetch('/stockfish/stockfish-18-lite.js')
       .then((res) => {
         if (!res.ok) throw new Error(`JS Fetch Failed: ${res.status}`);
-        return res.blob();
+        return res.text();
       })
-      .then((blob) => {
+      .then((code) => {
+        const interceptor = `
+          const oldLog = console.log;
+          console.log = function(...args) { postMessage({ type: 'debug', level: 'log', args }); oldLog(...args); };
+          const oldErr = console.error;
+          console.error = function(...args) { postMessage({ type: 'debug', level: 'error', args }); oldErr(...args); };
+          const oldWarn = console.warn;
+          console.warn = function(...args) { postMessage({ type: 'debug', level: 'warn', args }); oldWarn(...args); };
+          self.onunhandledrejection = (e) => postMessage({ type: 'debug', level: 'unhandled', reason: String(e.reason) });
+        `;
+        const blob = new Blob([interceptor + code], { type: 'application/javascript' });
         objectUrl = URL.createObjectURL(blob);
         // Pass the ABSOLUTE URL to the WASM file in the hash so the blob worker knows where to fetch it
         const wasmUrl = new URL('/stockfish/stockfish.wasm', window.location.href).href;
@@ -66,10 +76,19 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
         };
 
         worker.onmessage = (e: MessageEvent<any>) => {
+          // Intercept our debug messages
+          if (e.data && e.data.type === 'debug') {
+            setDebugLogs((prev) => [
+              ...prev.slice(-14),
+              `[${e.data.level.toUpperCase()}] ${JSON.stringify(e.data.args || e.data.reason)}`,
+            ]);
+            return;
+          }
+
           const raw = typeof e.data === 'string' ? e.data : e.data?.data || '';
           const line = raw.trim();
 
-          setDebugLogs((prev) => [...prev.slice(-9), `MSG: ${line}`]);
+          setDebugLogs((prev) => [...prev.slice(-14), `MSG: ${line}`]);
 
           if (line === 'uciok') {
             worker!.postMessage('isready');
