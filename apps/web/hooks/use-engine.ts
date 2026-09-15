@@ -48,6 +48,16 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
       })
       .then((code) => {
         const interceptor = `
+          var Module = {
+            locateFile: function(path, prefix) {
+              if (path.endsWith('.wasm')) {
+                return '${new URL('/stockfish/stockfish.wasm', window.location.href).href}';
+              }
+              // For pthread workers, Emscripten needs the worker script.
+              // We return our own Blob URL so the sub-workers inherit the COEP headers too!
+              return self.location.href;
+            }
+          };
           const oldLog = console.log;
           console.log = function(...args) { postMessage({ type: 'debug', level: 'log', args }); oldLog(...args); };
           const oldErr = console.error;
@@ -58,9 +68,7 @@ export function useEngine(options: { depth?: number; skillLevel?: number } = {})
         `;
         const blob = new Blob([interceptor + code], { type: 'application/javascript' });
         objectUrl = URL.createObjectURL(blob);
-        // Pass the ABSOLUTE URL to the WASM file in the hash so the blob worker knows where to fetch it
-        const wasmUrl = new URL('/stockfish/stockfish.wasm', window.location.href).href;
-        worker = new Worker(`${objectUrl}#${wasmUrl}`);
+        worker = new Worker(objectUrl);
         workerRef.current = worker;
 
         worker.onerror = (err) => {
