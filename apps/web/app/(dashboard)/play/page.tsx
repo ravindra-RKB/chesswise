@@ -223,7 +223,7 @@ export default function PlayPage() {
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
       {/* Board area */}
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex flex-1 items-start justify-center pt-2">
         <ChessBoard
           fen={chess.fen}
           orientation={orientation}

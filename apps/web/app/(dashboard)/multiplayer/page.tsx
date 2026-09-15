@@ -180,7 +180,7 @@ export default function MultiplayerPage() {
   return (
     <div className="flex h-full flex-col gap-6 lg:flex-row">
       {/* Board */}
-      <div className="flex flex-1 flex-col items-center justify-center space-y-4">
+      <div className="flex flex-1 flex-col items-start justify-center space-y-4 pt-2">
         {status === 'waiting' && (
           <div className="mb-4 space-y-2 text-center animate-in fade-in slide-in-from-bottom-4">
             <p className="text-lg font-medium text-foreground">Waiting for opponent to join...</p>
