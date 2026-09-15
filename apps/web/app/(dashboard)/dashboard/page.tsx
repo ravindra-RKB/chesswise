@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { AnnotationGlyph } from '@/components/chess/annotation-glyph';
+import Link from 'next/link';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -17,53 +18,62 @@ export default async function DashboardPage() {
         <p className="mt-1 text-muted-foreground">Your chess training dashboard</p>
       </div>
 
-      {/* Placeholder feature cards */}
+      {/* Feature cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
           {
             title: 'Play vs AI',
             desc: 'Challenge human-feeling AI opponents at any level.',
             glyph: '!?' as const,
+            href: '/play',
           },
           {
             title: 'Analyze Games',
             desc: 'Upload or import your games for deep AI analysis.',
             glyph: '!!' as const,
+            href: '/import',
           },
           {
             title: 'Daily Training',
             desc: 'Personalized puzzles from your own mistakes.',
             glyph: '!' as const,
+            href: '/train',
           },
           {
             title: 'Skill Profile',
             desc: 'Track your tactical and strategic strengths.',
             glyph: '!?' as const,
+            href: '/profile',
           },
           {
             title: 'AI Coach Chat',
             desc: 'Ask questions about your games and get grounded answers.',
             glyph: '!' as const,
+            href: '/coach',
           },
           {
             title: 'Repertoire',
             desc: 'Build and guard your opening repertoire.',
             glyph: '!?' as const,
+            href: '/openings',
           },
         ].map((feature) => (
-          <div
+          <Link
             key={feature.title}
-            className="group relative rounded-lg border border-border bg-card p-6 transition-colors hover:border-gold/30"
+            href={feature.href}
+            className="group relative block rounded-lg border border-border bg-card p-6 transition-colors hover:border-gold/50 hover:bg-muted/10"
           >
             <div className="flex items-start justify-between">
-              <h3 className="font-semibold text-foreground">{feature.title}</h3>
+              <h3 className="font-semibold text-foreground transition-colors group-hover:text-gold">
+                {feature.title}
+              </h3>
               <AnnotationGlyph type={feature.glyph} size="sm" />
             </div>
             <p className="mt-2 text-sm text-muted-foreground">{feature.desc}</p>
-            <span className="mt-4 inline-block rounded bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-              Coming Soon
-            </span>
-          </div>
+            <div className="mt-4 flex items-center text-xs font-medium text-muted-foreground transition-colors group-hover:text-gold">
+              Open feature <span>→</span>
+            </div>
+          </Link>
         ))}
       </div>
 
