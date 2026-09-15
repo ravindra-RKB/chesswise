@@ -44,9 +44,13 @@ model User {
   role             UserRole @default(PLAYER)
   xp               Int      @default(0)
   level            Int      @default(1)
+  coachId          String?  @map("coach_id") @db.Uuid
+  isPro            Boolean  @default(false) @map("is_pro")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
+  coach        User?          @relation("StudentCoach", fields: [coachId], references: [id])
+  students     User[]         @relation("StudentCoach")
   games        Game[]
   skillProfile SkillProfile?
   puzzleCards  PuzzleCard[]

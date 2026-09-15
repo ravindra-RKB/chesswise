@@ -5,7 +5,8 @@ import { LogoutButton } from './logout-button';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠', disabled: false },
-  { href: '/play', label: 'Play', icon: '♟', disabled: false },
+  { href: '/play', label: 'Play AI', icon: '🤖', disabled: false },
+  { href: '/multiplayer', label: 'Play PvP', icon: '⚔️', disabled: false },
   { href: '/analyze', label: 'Analyze', icon: '📊', disabled: false },
   { href: '/import', label: 'Import', icon: '📥', disabled: false },
   { href: '/profile', label: 'Profile', icon: '📈', disabled: false },
@@ -13,6 +14,7 @@ const navItems = [
   { href: '/openings', label: 'Openings', icon: '📖', disabled: false },
   { href: '/coach', label: 'Coach', icon: '💬', disabled: false },
   { href: '/settings', label: 'Settings', icon: '⚙️', disabled: false },
+  { href: '/pricing', label: 'Pro', icon: '⭐', disabled: false },
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +27,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  // Import prisma dynamically to fetch role
+  const { prisma } = await import('@/lib/prisma');
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseId: user.id },
+    select: { role: true },
+  });
+
+  const isCoach = dbUser?.role === 'COACH';
+  const finalNavItems = isCoach
+    ? [...navItems, { href: '/students', label: 'Students', icon: '👨‍🎓', disabled: false }]
+    : navItems;
+
   const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'Player';
 
   return (
@@ -35,8 +49,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <span className="font-serif text-lg font-bold text-foreground">Chesswise</span>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 p-4">
-          {navItems.map((item) => (
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+          {finalNavItems.map((item) => (
             <Link
               key={item.label}
               href={item.href}

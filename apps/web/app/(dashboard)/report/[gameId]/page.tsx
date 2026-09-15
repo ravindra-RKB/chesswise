@@ -277,8 +277,47 @@ export default function ReportPage() {
   const [coachMessage, setCoachMessage] = useState('');
   const [branchFen, setBranchFen] = useState<string | null>(null);
   const [branchLabel, setBranchLabel] = useState('');
+  const [isPlayingRecap, setIsPlayingRecap] = useState(false);
 
   const chess = useChess();
+
+  const handlePlayRecap = useCallback(() => {
+    if (!game) return;
+
+    if (isPlayingRecap) {
+      window.speechSynthesis.cancel();
+      setIsPlayingRecap(false);
+      return;
+    }
+
+    setIsPlayingRecap(true);
+    const mistakeCount = game.moves.filter((m) =>
+      ['MISTAKE', 'BLUNDER', 'INACCURACY'].includes(m.quality || ''),
+    ).length;
+    const topBlunder = game.moves.find((m) => m.quality === 'BLUNDER' || m.quality === 'MISTAKE');
+
+    let text = `Here is your game recap. `;
+    const openingName = (game.headers as any)['Opening'];
+    if (openingName) {
+      text += `The opening was the ${openingName}. `;
+    }
+
+    if (mistakeCount === 0) {
+      text += `You played a nearly flawless game. Excellent work!`;
+    } else {
+      text += `Overall, there were ${mistakeCount} inaccuracies or mistakes in this game. `;
+      if (topBlunder) {
+        text += `Your most critical moment was move ${Math.ceil(topBlunder.moveNumber / 2)}, where you played ${topBlunder.san}. `;
+        if (topBlunder.explanation) {
+          text += topBlunder.explanation;
+        }
+      }
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => setIsPlayingRecap(false);
+    window.speechSynthesis.speak(utterance);
+  }, [game, isPlayingRecap]);
 
   useEffect(() => {
     if (!gameId) return;
@@ -355,8 +394,19 @@ export default function ReportPage() {
             {h['White'] ?? '?'} <span className="text-base text-muted-foreground">vs</span>{' '}
             {h['Black'] ?? '?'}
           </h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
+          <p className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
             {h['Date'] ?? ''} · {h['Result'] ?? ''} · {h['Event'] ?? 'Game'}
+            <button
+              onClick={handlePlayRecap}
+              className={cn(
+                'ml-2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                isPlayingRecap
+                  ? 'animate-pulse border-primary/30 bg-primary/20 text-primary'
+                  : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted',
+              )}
+            >
+              {isPlayingRecap ? '🔊 Playing...' : '🔊 Play Recap'}
+            </button>
           </p>
         </div>
         {game.accuracy != null && (
