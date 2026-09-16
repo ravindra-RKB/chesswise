@@ -47,14 +47,12 @@ export default function PromotionModal({ color, onSelect, onCancel }: PromotionM
               )}
               title={p.name}
             >
-              <span
-                className={cn(
-                  'text-5xl leading-none drop-shadow-md',
-                  color === 'w' ? 'text-white' : 'text-black',
-                )}
-              >
-                {p.symbol}
-              </span>
+              <img
+                src={`/pieces/${color}${p.value.toUpperCase()}.svg`}
+                alt={p.name}
+                className="pointer-events-none h-12 w-12 select-none drop-shadow-md"
+                draggable={false}
+              />
               <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {p.name}
               </span>

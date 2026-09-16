@@ -100,17 +100,22 @@ export default function ChessBoard({
     [promotionPending, onMove],
   );
 
+  const getPieceFileName = (p: string) => {
+    const color = p === p.toUpperCase() ? 'w' : 'b';
+    return `${color}${p.toUpperCase()}`;
+  };
+
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block overflow-hidden rounded-sm ring-4 ring-[#333]">
       <div
         className="grid select-none"
         style={{
           gridTemplateColumns: `repeat(8, 1fr)`,
           gridTemplateRows: `repeat(8, 1fr)`,
-          width: 'min(80vw, 80vh, 560px)',
-          height: 'min(80vw, 80vh, 560px)',
-          maxWidth: '560px',
-          maxHeight: '560px',
+          width: 'min(90vw, 85vh, 760px)',
+          height: 'min(90vw, 85vh, 760px)',
+          maxWidth: '760px',
+          maxHeight: '760px',
         }}
       >
         {displayRanks.map((rank, rankIdx) =>
@@ -129,20 +134,26 @@ export default function ChessBoard({
                 onClick={() => handleSquareClick(square)}
                 className={cn(
                   'relative flex cursor-pointer items-center justify-center',
-                  'transition-colors duration-100',
-                  isLight ? 'bg-[#EDE6D6]' : 'bg-[#4a3728]',
-                  isSelected && 'ring-2 ring-inset ring-[#C9A24B]',
-                  isLastMove && 'bg-[#C9A24B]/40',
-                  isCheckedKing && 'bg-[#9B3B3B]',
+                  isLight ? 'bg-[#EBECD0]' : 'bg-[#739552]',
                 )}
                 style={{ aspectRatio: '1' }}
               >
+                {/* Last Move & Selected Highlight */}
+                {(isLastMove || isSelected) && (
+                  <div className="pointer-events-none absolute inset-0 bg-[#F5F682]/60 mix-blend-multiply" />
+                )}
+
+                {/* Check Highlight */}
+                {isCheckedKing && (
+                  <div className="pointer-events-none absolute inset-0 rounded-full bg-red-600/60 mix-blend-multiply blur-[2px]" />
+                )}
+
                 {/* Coordinate labels */}
                 {showCoordinates && fileIdx === 0 && (
                   <span
                     className={cn(
-                      'absolute left-1 top-0.5 select-none text-[10px] font-bold leading-none',
-                      isLight ? 'text-[#4a3728]' : 'text-[#EDE6D6]',
+                      'absolute left-1 top-1 select-none text-[11px] font-bold leading-none',
+                      isLight ? 'text-[#739552]' : 'text-[#EBECD0]',
                     )}
                   >
                     {rank}
@@ -151,8 +162,8 @@ export default function ChessBoard({
                 {showCoordinates && rankIdx === 7 && (
                   <span
                     className={cn(
-                      'absolute bottom-0.5 right-1 select-none text-[10px] font-bold leading-none',
-                      isLight ? 'text-[#4a3728]' : 'text-[#EDE6D6]',
+                      'absolute bottom-1 right-1.5 select-none text-[11px] font-bold leading-none',
+                      isLight ? 'text-[#739552]' : 'text-[#EBECD0]',
                     )}
                   >
                     {file}
@@ -161,25 +172,24 @@ export default function ChessBoard({
 
                 {/* Legal move indicator */}
                 {isLegalTarget && !piece && (
-                  <div className="pointer-events-none h-[30%] w-[30%] rounded-full bg-[#C9A24B]/60" />
+                  <div className="pointer-events-none z-10 h-[32%] w-[32%] rounded-full bg-black/15" />
                 )}
                 {isLegalTarget && piece && (
-                  <div className="pointer-events-none absolute inset-0 rounded-sm ring-4 ring-inset ring-[#C9A24B]/70" />
+                  <div className="pointer-events-none absolute inset-0 z-20 m-auto h-[90%] w-[90%] rounded-full border-[6px] border-black/15" />
                 )}
 
                 {/* Chess piece */}
                 {piece && (
-                  <span
+                  <img
+                    src={`/pieces/${getPieceFileName(piece)}.svg`}
+                    alt={piece}
                     className={cn(
-                      'z-10 select-none text-[min(6vw,42px)] leading-none',
-                      piece === piece.toUpperCase()
-                        ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
-                        : 'text-black drop-shadow-[0_1px_2px_rgba(255,255,255,0.4)]',
+                      'pointer-events-none z-10 h-[95%] w-[95%] select-none',
+                      // Add a very subtle drop shadow to give depth to the SVGs
+                      'drop-shadow-[0_2px_3px_rgba(0,0,0,0.3)]',
                     )}
-                    style={{ fontSize: 'min(6vw, 6vh, 42px)' }}
-                  >
-                    {PIECE_UNICODE[piece]}
-                  </span>
+                    draggable={false}
+                  />
                 )}
               </div>
             );
